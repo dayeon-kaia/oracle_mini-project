@@ -1,0 +1,11 @@
+# Google OAuth 관련 파일 (절대 커밋 금지)
+token.pickle
+credentials.json
+
+# Python 관련
+__pycache__/
+*.pyc
+*.pyo
+.env
+venv/
+*.ipynb_checkpoints/
