@@ -1,0 +1,260 @@
+/* ====================================
+   Neon Glow Effects & Animations
+   ==================================== */
+
+/* === Neon Glow Base === */
+.neon-glow {
+    position: relative;
+}
+
+/* === Critical (Red) Neon === */
+.neon-glow-critical {
+    box-shadow:
+        0 0 10px var(--neon-red),
+        0 0 20px rgba(255, 8, 68, 0.5),
+        0 0 30px rgba(255, 8, 68, 0.3);
+    border-color: var(--neon-red);
+    animation: pulse-critical 2s ease-in-out infinite;
+}
+
+@keyframes pulse-critical {
+
+    0%,
+    100% {
+        box-shadow:
+            0 0 10px var(--neon-red),
+            0 0 20px rgba(255, 8, 68, 0.5),
+            0 0 30px rgba(255, 8, 68, 0.3);
+    }
+
+    50% {
+        box-shadow:
+            0 0 15px var(--neon-red),
+            0 0 30px rgba(255, 8, 68, 0.7),
+            0 0 45px rgba(255, 8, 68, 0.4);
+    }
+}
+
+/* === Warning (Amber) Neon === */
+.neon-glow-warning {
+    box-shadow:
+        0 0 10px var(--neon-amber),
+        0 0 20px rgba(255, 170, 0, 0.5),
+        0 0 30px rgba(255, 170, 0, 0.3);
+    border-color: var(--neon-amber);
+}
+
+/* === Stable (Cyan) Neon === */
+.neon-glow-stable {
+    box-shadow:
+        0 0 8px var(--neon-cyan),
+        0 0 15px rgba(0, 245, 255, 0.4),
+        0 0 25px rgba(0, 245, 255, 0.2);
+    border-color: var(--neon-cyan);
+}
+
+/* === AI (Purple) Neon === */
+.neon-glow-ai {
+    box-shadow:
+        0 0 10px var(--neon-purple),
+        0 0 20px rgba(168, 85, 247, 0.5),
+        0 0 30px rgba(168, 85, 247, 0.3);
+    border-color: var(--neon-purple);
+}
+
+/* === Neon Text === */
+.neon-text-critical {
+    color: var(--neon-red);
+    text-shadow:
+        0 0 5px var(--neon-red),
+        0 0 10px rgba(255, 8, 68, 0.5);
+}
+
+.neon-text-warning {
+    color: var(--neon-amber);
+    text-shadow:
+        0 0 5px var(--neon-amber),
+        0 0 10px rgba(255, 170, 0, 0.5);
+}
+
+.neon-text-stable {
+    color: var(--neon-cyan);
+    text-shadow:
+        0 0 5px var(--neon-cyan),
+        0 0 10px rgba(0, 245, 255, 0.5);
+}
+
+.neon-text-ai {
+    color: var(--neon-purple);
+    text-shadow:
+        0 0 5px var(--neon-purple),
+        0 0 10px rgba(168, 85, 247, 0.5);
+}
+
+/* === Neon Border === */
+.neon-border-critical {
+    border: 2px solid var(--neon-red);
+    box-shadow:
+        inset 0 0 10px rgba(255, 8, 68, 0.3),
+        0 0 10px rgba(255, 8, 68, 0.3);
+}
+
+.neon-border-warning {
+    border: 2px solid var(--neon-amber);
+    box-shadow:
+        inset 0 0 10px rgba(255, 170, 0, 0.3),
+        0 0 10px rgba(255, 170, 0, 0.3);
+}
+
+.neon-border-ai {
+    border: 2px solid var(--neon-purple);
+    box-shadow:
+        inset 0 0 10px rgba(168, 85, 247, 0.3),
+        0 0 10px rgba(168, 85, 247, 0.3);
+}
+
+/* === Animated Pulse Effects === */
+@keyframes pulse-warning {
+
+    0%,
+    100% {
+        box-shadow:
+            0 0 10px var(--neon-amber),
+            0 0 20px rgba(255, 170, 0, 0.4);
+    }
+
+    50% {
+        box-shadow:
+            0 0 15px var(--neon-amber),
+            0 0 30px rgba(255, 170, 0, 0.6);
+    }
+}
+
+@keyframes pulse-stable {
+
+    0%,
+    100% {
+        box-shadow:
+            0 0 8px var(--neon-cyan),
+            0 0 15px rgba(0, 245, 255, 0.3);
+    }
+
+    50% {
+        box-shadow:
+            0 0 12px var(--neon-cyan),
+            0 0 20px rgba(0, 245, 255, 0.5);
+    }
+}
+
+@keyframes pulse-ai {
+
+    0%,
+    100% {
+        box-shadow:
+            0 0 10px var(--neon-purple),
+            0 0 20px rgba(168, 85, 247, 0.4);
+    }
+
+    50% {
+        box-shadow:
+            0 0 15px var(--neon-purple),
+            0 0 30px rgba(168, 85, 247, 0.6);
+    }
+}
+
+/* === Breathing Animation (subtle for live data) === */
+@keyframes breathe {
+
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.7;
+        transform: scale(0.98);
+    }
+}
+
+.breathe {
+    animation: breathe 3s ease-in-out infinite;
+}
+
+/* === Scan Line Effect === */
+.scan-line {
+    position: relative;
+    overflow: hidden;
+}
+
+.scan-line::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg,
+            transparent,
+            var(--neon-cyan),
+            transparent);
+    animation: scan 3s linear infinite;
+}
+
+@keyframes scan {
+    0% {
+        left: -100%;
+    }
+
+    100% {
+        left: 100%;
+    }
+}
+
+/* === Data Stream Effect (for sparklines) === */
+@keyframes data-stream {
+    0% {
+        stroke-dashoffset: 1000;
+    }
+
+    100% {
+        stroke-dashoffset: 0;
+    }
+}
+
+.data-stream {
+    stroke-dasharray: 1000;
+    animation: data-stream 2s ease-in-out;
+}
+
+/* === Shimmer Effect === */
+@keyframes shimmer {
+    0% {
+        background-position: -1000px 0;
+    }
+
+    100% {
+        background-position: 1000px 0;
+    }
+}
+
+.shimmer {
+    background: linear-gradient(90deg,
+            transparent,
+            rgba(255, 255, 255, 0.1),
+            transparent);
+    background-size: 1000px 100%;
+    animation: shimmer 3s infinite;
+}
+
+/* === Glow on Hover === */
+.glow-on-hover {
+    transition: all 0.3s ease;
+}
+
+.glow-on-hover:hover {
+    box-shadow:
+        0 0 15px var(--neon-purple),
+        0 0 30px rgba(168, 85, 247, 0.4);
+    transform: translateY(-2px);
+}
