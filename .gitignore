@@ -21,5 +21,5 @@ estimate.py
 guidelines/
 ingest_bge_m3_supabase.py
 
-.xlsx
+*.xlsx
 .env
