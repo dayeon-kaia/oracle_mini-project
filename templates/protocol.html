@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Protocol Assistant</title>
+    <style>
+      :root {
+        --bg: #f4f1ea;
+        --ink: #1e1b18;
+        --muted: #6f6a62;
+        --panel: #fff8ef;
+        --accent: #1f6feb;
+        --chip: #efe6d8;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Noto Serif KR", "Iropke Batang", serif;
+        background:
+          linear-gradient(135deg, #fff2d8 0%, #f4f1ea 55%, #f0f3f8 100%);
+        color: var(--ink);
+      }
+      .wrap {
+        max-width: 900px;
+        margin: 32px auto 60px;
+        padding: 0 18px;
+      }
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        gap: 16px;
+        margin-bottom: 18px;
+      }
+      h1 {
+        margin: 0;
+        font-size: 28px;
+        letter-spacing: -0.2px;
+      }
+      .sub {
+        color: var(--muted);
+        font-size: 14px;
+      }
+      form {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 10px;
+        background: var(--panel);
+        padding: 14px;
+        border-radius: 14px;
+        border: 1px solid #e2d6c5;
+      }
+      input[type="text"] {
+        border: 1px solid #d6c6b1;
+        border-radius: 10px;
+        padding: 12px 14px;
+        font-size: 16px;
+        background: #fffdf8;
+        color: var(--ink);
+      }
+      button {
+        border: none;
+        border-radius: 10px;
+        padding: 12px 18px;
+        font-weight: 700;
+        background: var(--accent);
+        color: white;
+        cursor: pointer;
+      }
+      .card {
+        margin-top: 18px;
+        background: white;
+        border-radius: 16px;
+        border: 1px solid #e6d8c6;
+        padding: 18px;
+        box-shadow: 0 12px 30px rgba(30, 27, 24, 0.08);
+      }
+      .title {
+        font-size: 22px;
+        margin: 0 0 14px;
+      }
+      .step {
+        display: grid;
+        grid-template-columns: 40px 1fr;
+        gap: 8px 14px;
+        padding: 12px 0;
+        border-top: 1px dashed #e3d7c7;
+      }
+      .step:first-of-type { border-top: none; }
+      .badge {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: var(--chip);
+        display: grid;
+        place-items: center;
+        font-weight: 700;
+        color: #534b40;
+      }
+      .step h3 {
+        margin: 0 0 6px;
+        font-size: 17px;
+      }
+      .step ul {
+        margin: 0;
+        padding-left: 18px;
+        line-height: 1.6;
+      }
+      .disclaimer {
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      details {
+        margin-top: 16px;
+        border-top: 1px solid #eee0cf;
+        padding-top: 12px;
+      }
+      summary {
+        cursor: pointer;
+        font-weight: 700;
+        color: #3b352f;
+      }
+      .evidence {
+        margin-top: 12px;
+        display: grid;
+        gap: 10px;
+      }
+      .ev-card {
+        padding: 12px;
+        border-radius: 12px;
+        background: #fffaf3;
+        border: 1px solid #eadfce;
+        font-family: "IBM Plex Sans", "Noto Sans KR", sans-serif;
+        font-size: 14px;
+      }
+      .ev-meta {
+        color: #796f64;
+        font-size: 12px;
+        margin-bottom: 6px;
+      }
+      @media (max-width: 640px) {
+        form { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="header">
+        <div>
+          <h1>Protocol Assistant</h1>
+          <div class="sub">인턴/레지던트용. 검색 결과는 숨기고 프로토콜만 제공합니다.</div>
+        </div>
+      </div>
+
+      <form method="post">
+        <input
+          type="text"
+          name="query"
+          placeholder="예: 패혈증 의심"
+          value="{{ query }}"
+          required
+        />
+        <button type="submit">프로토콜 생성</button>
+      </form>
+
+      {% if protocol %}
+        <div class="card">
+          <h2 class="title">{{ protocol.title }}</h2>
+          {% for step in protocol.steps %}
+            <div class="step">
+              <div class="badge">{{ step.order }}</div>
+              <div>
+                <h3>{{ step.title }}</h3>
+                <ul>
+                  {% for a in step.actions %}
+                    <li>{{ a }}</li>
+                  {% endfor %}
+                </ul>
+              </div>
+            </div>
+          {% endfor %}
+          <div class="disclaimer">{{ protocol.disclaimer }}</div>
+
+          <details>
+            <summary>근거 보기</summary>
+            <div class="evidence">
+              {% for e in evidence %}
+                <div class="ev-card">
+                  <div class="ev-meta">{{ e.doc_title }} | page {{ e.page }}</div>
+                  <div>{{ e.snippet }}</div>
+                </div>
+              {% endfor %}
+            </div>
+          </details>
+        </div>
+      {% endif %}
+    </div>
+  </body>
+</html>

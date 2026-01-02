@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ICU Protocol Command Center - Rule-Based</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .input-section {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            margin-bottom: 30px;
+        }
+
+        .input-section h2 {
+            color: #333;
+            font-size: 20px;
+            margin-bottom: 20px;
+        }
+
+        .input-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .input-field {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .input-field label {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .input-field input,
+        .input-field select {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .input-field input:focus,
+        .input-field select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .results-section {
+            display: none;
+        }
+
+        .results-section.active {
+            display: block;
+        }
+
+        .protocol-group {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            margin-bottom: 20px;
+        }
+
+        .protocol-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .protocol-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-right: 15px;
+        }
+
+        .protocol-icon.sepsis {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .protocol-icon.vent {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .protocol-icon.pressor {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        }
+
+        .protocol-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .action-card {
+            padding: 15px 20px;
+            margin-bottom: 12px;
+            border-radius: 8px;
+            border-left: 4px solid;
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+        }
+
+        .action-card:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .action-card.STAT {
+            background: #fee;
+            border-left-color: #c00;
+        }
+
+        .action-card.HIGH {
+            background: #ffefd5;
+            border-left-color: #ff8c00;
+        }
+
+        .action-card.MEDIUM {
+            background: #fffacd;
+            border-left-color: #ffd700;
+        }
+
+        .action-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .priority-badge {
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-right: 10px;
+        }
+
+        .priority-badge.STAT {
+            background: #c00;
+            color: white;
+        }
+
+        .priority-badge.HIGH {
+            background: #ff8c00;
+            color: white;
+        }
+
+        .priority-badge.MEDIUM {
+            background: #ffd700;
+            color: #333;
+        }
+
+        .action-text {
+            font-size: 15px;
+            color: #333;
+            font-weight: 500;
+            flex: 1;
+        }
+
+        .evidence-link {
+            font-size: 12px;
+            color: #667eea;
+            text-decoration: none;
+            margin-top: 5px;
+            display: inline-block;
+        }
+
+        .evidence-link:hover {
+            text-decoration: underline;
+        }
+
+        .evidence-details {
+            display: none;
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 6px;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .evidence-details.show {
+            display: block;
+        }
+
+        .no-results {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            text-align: center;
+            color: #666;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+            color: white;
+            font-size: 18px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .sample-data-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+
+        .sample-data-btn:hover {
+            background: #218838;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏥 ICU Protocol Command Center</h1>
+            <p class="subtitle">Rule-Based Protocol Evaluation System</p>
+        </header>
+
+        <div class="input-section">
+            <h2>환자 상태 입력 (MIMIC Features)</h2>
+            <form id="protocolForm">
+                <div class="input-grid">
+                    <div class="input-field">
+                        <label for="patient_id">Patient ID</label>
+                        <input type="text" id="patient_id" name="patient_id" value="demo_001">
+                    </div>
+                    <div class="input-field">
+                        <label for="map">MAP (mmHg)</label>
+                        <input type="number" id="map" name="map" step="0.1">
+                    </div>
+                    <div class="input-field">
+                        <label for="sbp">SBP (mmHg)</label>
+                        <input type="number" id="sbp" name="sbp" step="0.1">
+                    </div>
+                    <div class="input-field">
+                        <label for="lactate">Lactate (mmol/L)</label>
+                        <input type="number" id="lactate" name="lactate" step="0.1">
+                    </div>
+                    <div class="input-field">
+                        <label for="spo2">SpO2 (%)</label>
+                        <input type="number" id="spo2" name="spo2" step="0.1">
+                    </div>
+                    <div class="input-field">
+                        <label for="fio2">FiO2 (0-1)</label>
+                        <input type="number" id="fio2" name="fio2" step="0.01">
+                    </div>
+                    <div class="input-field">
+                        <label for="rr">Respiratory Rate</label>
+                        <input type="number" id="rr" name="rr" step="1">
+                    </div>
+                    <div class="input-field">
+                        <label for="urine_output_ml_per_kg_hr">Urine Output (mL/kg/hr)</label>
+                        <input type="number" id="urine_output_ml_per_kg_hr" name="urine_output_ml_per_kg_hr" step="0.1">
+                    </div>
+                    <div class="input-field">
+                        <label for="on_oxygen">산소 투여</label>
+                        <select id="on_oxygen" name="on_oxygen">
+                            <option value="false">No</option>
+                            <option value="true">Yes</option>
+                        </select>
+                    </div>
+                    <div class="input-field">
+                        <label for="on_hfnc">HFNC 사용</label>
+                        <select id="on_hfnc" name="on_hfnc">
+                            <option value="false">No</option>
+                            <option value="true">Yes</option>
+                        </select>
+                    </div>
+                    <div class="input-field">
+                        <label for="on_vent">기계환기</label>
+                        <select id="on_vent" name="on_vent">
+                            <option value="false">No</option>
+                            <option value="true">Yes</option>
+                        </select>
+                    </div>
+                    <div class="input-field">
+                        <label for="on_pressor">승압제 사용</label>
+                        <select id="on_pressor" name="on_pressor">
+                            <option value="false">No</option>
+                            <option value="true">Yes</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="margin-top: 20px;">
+                    <button type="submit" class="btn">프로토콜 평가</button>
+                    <button type="button" class="sample-data-btn" onclick="loadSampleData()">샘플 데이터 로드</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="loading" id="loading">
+            평가 중...
+        </div>
+
+        <div class="results-section" id="results">
+            <!-- Results will be inserted here -->
+        </div>
+    </div>
+
+    <script>
+        function loadSampleData() {
+            const sampleData = {
+                patient_id: 'demo_001',
+                map: 58,
+                sbp: 82,
+                lactate: 4.2,
+                spo2: 89,
+                fio2: 0.5,
+                rr: 32,
+                on_oxygen: true,
+                on_hfnc: false,
+                on_vent: false,
+                on_pressor: false,
+                urine_output_ml_per_kg_hr: 0.3
+            };
+
+            for (const [key, value] of Object.entries(sampleData)) {
+                const element = document.getElementById(key);
+                if (element) {
+                    element.value = value;
+                }
+            }
+        }
+
+        document.getElementById('protocolForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // Collect form data
+            const formData = new FormData(e.target);
+            const patientData = {};
+
+            for (const [key, value] of formData.entries()) {
+                if (value === '') continue;
+                
+                // Convert boolean strings
+                if (value === 'true' || value === 'false') {
+                    patientData[key] = value === 'true';
+                } else if (!isNaN(value) && value !== '') {
+                    patientData[key] = parseFloat(value);
+                } else {
+                    patientData[key] = value;
+                }
+            }
+
+            // Show loading
+            document.getElementById('loading').classList.add('active');
+            document.getElementById('results').classList.remove('active');
+
+            try {
+                const response = await fetch('/api/evaluate-protocols', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(patientData)
+                });
+
+                const result = await response.json();
+                displayResults(result);
+            } catch (error) {
+                console.error('Error:', error);
+                alert('프로토콜 평가 중 오류가 발생했습니다.');
+            } finally {
+                document.getElementById('loading').classList.remove('active');
+            }
+        });
+
+        function displayResults(result) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '';
+
+            if (!result.actions || result.actions.length === 0) {
+                resultsDiv.innerHTML = '<div class="no-results">활성화된 프로토콜이 없습니다.</div>';
+                resultsDiv.classList.add('active');
+                return;
+            }
+
+            // Group actions by protocol
+            const groupedActions = {};
+            result.actions.forEach(action => {
+                if (!groupedActions[action.protocol]) {
+                    groupedActions[action.protocol] = [];
+                }
+                groupedActions[action.protocol].push(action);
+            });
+
+            // Protocol info
+            const protocolInfo = {
+                sepsis: { title: '패혈증 프로토콜', icon: '💉' },
+                vent: { title: '호흡 관리 프로토콜', icon: '🫁' },
+                pressor: { title: '승압제 프로토콜', icon: '💊' }
+            };
+
+            // Render each protocol group
+            for (const [protocol, actions] of Object.entries(groupedActions)) {
+                const info = protocolInfo[protocol] || { title: protocol, icon: '📋' };
+                
+                const protocolDiv = document.createElement('div');
+                protocolDiv.className = 'protocol-group';
+                protocolDiv.innerHTML = `
+                    <div class="protocol-header">
+                        <div class="protocol-icon ${protocol}">${info.icon}</div>
+                        <div class="protocol-title">${info.title}</div>
+                    </div>
+                    <div class="actions-container" id="actions-${protocol}"></div>
+                `;
+
+                resultsDiv.appendChild(protocolDiv);
+
+                const actionsContainer = document.getElementById(`actions-${protocol}`);
+                actions.forEach((action, index) => {
+                    const actionCard = createActionCard(action, index);
+                    actionsContainer.appendChild(actionCard);
+                });
+            }
+
+            resultsDiv.classList.add('active');
+        }
+
+        function createActionCard(action, index) {
+            const card = document.createElement('div');
+            card.className = `action-card ${action.priority}`;
+            
+            const evidenceId = `evidence-${action.protocol}-${index}`;
+            
+            card.innerHTML = `
+                <div class="action-header">
+                    <span class="priority-badge ${action.priority}">${action.priority}</span>
+                    <span class="action-text">${action.action}</span>
+                </div>
+                ${action.evidence ? `
+                    <a href="#" class="evidence-link" onclick="toggleEvidence('${evidenceId}'); return false;">
+                        📚 근거 보기
+                    </a>
+                    <div class="evidence-details" id="${evidenceId}">
+                        <strong>출처:</strong> ${action.evidence.source || 'N/A'}<br>
+                        <strong>페이지:</strong> ${action.evidence.page || 'N/A'}
+                    </div>
+                ` : ''}
+            `;
+
+            return card;
+        }
+
+        function toggleEvidence(evidenceId) {
+            const element = document.getElementById(evidenceId);
+            if (element) {
+                element.classList.toggle('show');
+            }
+        }
+    </script>
+</body>
+</html>

@@ -2,5 +2,19 @@ google-auth==2.25.2
 google-auth-oauthlib==1.2.0
 google-auth-httplib2==0.2.0
 google-api-python-client==2.110.0
-pandas==2.1.4
-requests==2.31.0
+# pandas wheel unavailable on Python 3.13; install via conda or use Python<=3.12
+pandas==2.1.4; python_version < "3.13"
+requests==2.32.3
+langchain==0.3.10
+langchain-community==0.3.10
+langchain-text-splitters==0.3.0
+langchain-chroma==0.1.4
+chromadb==0.5.3
+pypdf==6.5.0
+sentence-transformers
+langchain-huggingface
+google-genai
+openai
+langchain-openai
+flask
+python-dotenv

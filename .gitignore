@@ -9,3 +9,17 @@ __pycache__/
 .env
 venv/
 *.ipynb_checkpoints/
+check_dim.py 
+whichgmini.py
+drive_utils.py
+googledrive.ipynb   
+
+
+#vectorDB
+db_medical/
+estimate.py
+guidelines/
+ingest_bge_m3_supabase.py
+
+.xlsx
+.env
