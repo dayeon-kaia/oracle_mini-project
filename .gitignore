@@ -23,4 +23,9 @@ node_modules/
 .idea/
 .DS_Store
 
+# 임시
 data-pipeline/scripts
+
+# Airflow
+airflow/logs/*
+!airflow/logs/.gitkeep
