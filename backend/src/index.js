@@ -29,11 +29,13 @@ const patientsRouter = require("./routes/patients");
 const predictionRouter = require("./routes/prediction");
 const summaryRouter = require("./routes/summary");
 const guidelinesRouter = require("./routes/guidelines");
+const authRouter = require("./routes/auth");
 
 app.use("/api/patients", patientsRouter); // 환자 관련 API
 app.use("/api/prediction", predictionRouter); // 예측 관련 API
 app.use("/api/summary", summaryRouter); // AI 요약 API
 app.use("/api/guidelines", guidelinesRouter); // 가이드라인 API
+app.use("/api/auth", authRouter); // 계정 기반 로그인 API
 
 // ========================
 // 헬스 체크
