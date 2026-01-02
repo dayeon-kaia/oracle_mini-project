@@ -23,4 +23,8 @@ node_modules/
 .idea/
 .DS_Store
 
-data-pipeline/scripts
+.gitkeep
+20251231.ipynb 
+20260102.ipynb 
+data.ipynb 
+mimic_total.duckdb 
