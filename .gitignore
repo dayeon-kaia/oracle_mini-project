@@ -23,15 +23,14 @@ node_modules/
 .idea/
 .DS_Store
 
-.gitkeep
-20251231.ipynb 
-20260102.ipynb 
-data.ipynb 
-mimic_total.duckdb 
-
-# 임시
-data-pipeline/scripts
-
 # Airflow
 airflow/logs/*
 !airflow/logs/.gitkeep
+
+# data
+20251231.ipynb 
+20260102.ipynb 
+data.ipynb 
+mimic_total.*
+data-pipeline/data/processed/*.csv
+data-pipeline/data/raw/hosp/
