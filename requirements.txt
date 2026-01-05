@@ -18,3 +18,4 @@ openai
 langchain-openai
 flask
 python-dotenv
+pymupdf4llm
