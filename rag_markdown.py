@@ -12,7 +12,9 @@ except ImportError:
 
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
+from langchain_chroma import Chroma
 from langchain.schema import Document
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 
 # Configuration
@@ -144,6 +146,26 @@ def extract_sections_from_markdown(md_text: str, source_metadata: Dict) -> List[
         if len(current_section.content) >= MIN_CHUNK_SIZE:
             sections.append(current_section)
     
+    # Fallback Mechanism: If no sections found (no headers), chunk by length
+    if not sections and md_text.strip():
+        print("    ! No headers found. Using fallback length-based chunking.")
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=MAX_CHUNK_SIZE,
+            chunk_overlap=200,
+            separators=["\n\n", "\n", " ", ""]
+        )
+        chunks = text_splitter.split_text(md_text)
+        
+        for i, chunk in enumerate(chunks):
+            sections.append(MarkdownSection(
+                level=1,
+                title=f"Section {i+1} (Fallback)",
+                content=chunk,
+                start_page=1, # We lose page info in fallback for now, or could estimate
+                end_page=1,
+                parent_path="Fallback Content"
+            ))
+            
     return sections
 
 
@@ -235,9 +257,10 @@ def sections_to_documents(sections: List[MarkdownSection], source: str) -> List[
     return documents
 
 
-def load_pdfs_as_markdown(pdf_folder: str) -> List[Document]:
+def load_pdfs_as_markdown(pdf_folder: str, target_files: List[str] = None) -> List[Document]:
     """
-    Load all PDFs from folder, convert to markdown, and create structured documents
+    Load PDFs from folder, convert to markdown, and create structured documents.
+    If target_files is provided, only process those files.
     """
     if not os.path.isdir(pdf_folder):
         raise FileNotFoundError(f"PDF folder not found: {pdf_folder}")
@@ -246,6 +269,13 @@ def load_pdfs_as_markdown(pdf_folder: str) -> List[Document]:
     if not pdf_paths:
         raise FileNotFoundError(f"No PDFs found in: {pdf_folder}")
     
+    # Filter if targets specified
+    if target_files:
+        pdf_paths = [p for p in pdf_paths if os.path.basename(p) in target_files]
+        if not pdf_paths:
+             print(f"Warning: None of the target files found in {pdf_folder}")
+             return []
+
     all_documents = []
     print(f"[1] Converting {len(pdf_paths)} PDFs to Markdown...")
     
@@ -284,10 +314,18 @@ def load_pdfs_as_markdown(pdf_folder: str) -> List[Document]:
 
 def build_vector_db():
     """
-    Build vector database with markdown-based chunking
+    # Build vector database with markdown-based chunking
     """
+    # Target files that failed previously
+    TARGET_FILES = [
+        "2007 대한중환자의학회_만성기도폐쇄성질환 기계환기법 치료지침.pdf",
+        "2022 대한심부전학회 심부전 진료지침.pdf",
+        "2024 질병관리청 대한중환자의학회 성인 패혈증 초기치료지침서.pdf",
+        "2024 질병관리청 성인 패혈증 초기치료지침서.pdf"
+    ]
+    
     # Load PDFs as structured markdown documents
-    documents = load_pdfs_as_markdown(PDF_FOLDER)
+    documents = load_pdfs_as_markdown(PDF_FOLDER, target_files=TARGET_FILES)
     
     if not documents:
         raise ValueError("No documents were created from PDFs")
