@@ -28,3 +28,10 @@ node_modules/
 20260102.ipynb 
 data.ipynb 
 mimic_total.duckdb 
+
+# 임시
+data-pipeline/scripts
+
+# Airflow
+airflow/logs/*
+!airflow/logs/.gitkeep

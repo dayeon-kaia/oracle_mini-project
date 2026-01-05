@@ -1,0 +1,94 @@
+# ============================================================
+# Airflow 로컬 실행 환경
+# ============================================================
+# 실행: docker-compose up -d
+# 중지: docker-compose down
+# 웹 UI: http://localhost:8080 (admin / admin)
+# ============================================================
+
+# ============================================================
+# 공통 설정 (재사용용)
+# ============================================================
+x-airflow-common: &airflow-common
+  image: apache/airflow:2.7.3
+  environment:
+    # 실행 방식: 단일 서버용 LocalExecutor
+    - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+    # 메타데이터 DB 연결 (아래 postgres 서비스)
+    - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
+    # 암호화 키 (비밀번호 등 암호화)
+    - AIRFLOW__CORE__FERNET_KEY=FB0o_zt4e3Ziq3LdUUO7F2Z95cvFFx16hU8jTeR1ASM=
+    # 예제 DAG 안 불러옴
+    - AIRFLOW__CORE__LOAD_EXAMPLES=False
+    # 웹서버 세션 키
+    - AIRFLOW__WEBSERVER__SECRET_KEY=your_secret_key_here
+  volumes:
+    # 내 컴퓨터 폴더 ↔ 컨테이너 폴더 연결
+    - ./dags:/opt/airflow/dags # DAG 파일들
+    - ./logs:/opt/airflow/logs # 실행 로그
+    - ./plugins:/opt/airflow/plugins # 커스텀 플러그인
+  depends_on:
+    - postgres
+
+# ============================================================
+# 서비스 정의
+# ============================================================
+services:
+  # ----------------------------------------------------------
+  # PostgreSQL: Airflow 메타데이터 저장
+  # ----------------------------------------------------------
+  postgres:
+    image: postgres:13
+    environment:
+      - POSTGRES_USER=airflow
+      - POSTGRES_PASSWORD=airflow
+      - POSTGRES_DB=airflow
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+
+  # ----------------------------------------------------------
+  # Airflow 초기화 (한 번만 실행)
+  # - DB 테이블 생성
+  # - 관리자 계정 생성 (admin/admin)
+  # ----------------------------------------------------------
+  airflow-init:
+    <<: *airflow-common
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        airflow db init
+        airflow users create \
+          --username admin \
+          --password admin \
+          --firstname Admin \
+          --lastname User \
+          --role Admin \
+          --email admin@example.com
+    restart: "no"
+
+  # ----------------------------------------------------------
+  # Airflow 웹서버: 웹 UI 제공
+  # http://localhost:8080
+  # ----------------------------------------------------------
+  airflow-webserver:
+    <<: *airflow-common
+    command: webserver
+    ports:
+      - "8080:8080"
+    restart: always
+
+  # ----------------------------------------------------------
+  # Airflow 스케줄러: DAG 실행 관리
+  # ----------------------------------------------------------
+  airflow-scheduler:
+    <<: *airflow-common
+    command: scheduler
+    restart: always
+
+# ============================================================
+# 볼륨 (데이터 영구 저장)
+# ============================================================
+volumes:
+  postgres_data:
