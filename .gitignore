@@ -38,3 +38,5 @@ data-pipeline/data/raw/hosp/
 
 #hy data
 mimic/
+v0/
+v0-query/
