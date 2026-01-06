@@ -23,6 +23,7 @@ node_modules/
 .idea/
 .DS_Store
 
+
 # Airflow
 airflow/logs/*
 !airflow/logs/.gitkeep
@@ -34,3 +35,6 @@ data.ipynb
 mimic_total.*
 data-pipeline/data/processed/*.csv
 data-pipeline/data/raw/hosp/
+
+#hy data
+mimic/

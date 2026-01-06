@@ -1,0 +1,142 @@
+{
+  "protocol": "sepsis",
+  "description": "패혈증 초기 대응 프로토콜 (성인, ICU)",
+  "rules": [
+    {
+      "rule_id": "SEPSIS_LACTATE_RECHECK",
+      "priority": "HIGH",
+      "condition": {
+        "lactate_ge": 2.0
+      },
+      "action": "Lactate 재측정 계획 수립 (2–4시간 이내)",
+      "evidence": {
+        "source": "KCDC + KSCCM 2024 패혈증 가이드라인",
+        "page": 45
+      }
+    },
+    {
+      "rule_id": "SEPSIS_TISSUE_HYPOPERFUSION",
+      "priority": "STAT",
+      "condition": {
+        "lactate_ge": 4.0
+      },
+      "action": "조직 저관류 의심 → 즉각적 초기 소생 필요",
+      "evidence": {
+        "source": "KCDC + KSCCM 2024 패혈증 가이드라인",
+        "page": 47
+      }
+    },
+    {
+      "rule_id": "SEPSIS_HYPOTENSION_DETECTED",
+      "priority": "STAT",
+      "condition": {
+        "sbp_lt": 90
+      },
+      "action": "저혈압 확인 → 패혈증 초기 소생 프로토콜 활성화",
+      "evidence": {
+        "source": "KCDC + KSCCM 2024 패혈증 가이드라인",
+        "page": 42
+      }
+    },
+    {
+      "rule_id": "SEPSIS_FLUID_30ML",
+      "priority": "STAT",
+      "condition": {
+        "any": [
+          {"sbp_lt": 90},
+          {"lactate_ge": 4.0}
+        ]
+      },
+      "action": "Crystalloid 30 mL/kg, 3시간 내 투여 고려",
+      "evidence": {
+        "source": "KCDC + KSCCM 2024 패혈증 가이드라인",
+        "page": 48
+      }
+    },
+    {
+      "rule_id": "SEPSIS_HYPOXIA_MONITORING",
+      "priority": "HIGH",
+      "condition": {
+        "all": [
+          {"on_oxygen": true},
+          {"spo2_lt": 92}
+        ]
+      },
+      "action": "저산소증 동반 → 호흡 상태 면밀 모니터링",
+      "evidence": {
+        "source": "KCDC + KSCCM 2024 패혈증 가이드라인",
+        "page": 52
+      }
+    },
+    {
+      "rule_id": "SEPSIS_URINE_OUTPUT_LOW",
+      "priority": "HIGH",
+      "condition": {
+        "urine_output_ml_per_kg_hr_lt": 0.5
+      },
+      "action": "소변량 감소 → 신장 저관류 가능성 고려",
+      "evidence": {
+        "source": "KCDC + KSCCM 2024 패혈증 가이드라인",
+        "page": 50
+      }
+    },
+    {
+      "rule_id": "SEPSIS_MAP_LOW",
+      "priority": "STAT",
+      "condition": {
+        "map_lt": 65
+      },
+      "action": "저혈압 지속 여부 평가 → 승압제 필요성 검토",
+      "evidence": {
+        "source": "KCDC + KSCCM 2024 패혈증 가이드라인",
+        "page": 54
+      }
+    },
+    {
+      "rule_id": "SEPSIS_COMBINED_SHOCK",
+      "priority": "STAT",
+      "condition": {
+        "all": [
+          {"map_lt": 65},
+          {"lactate_ge": 2.0}
+        ]
+      },
+      "action": "패혈성 쇼크 의심 → 즉각적 집중 치료 필요",
+      "evidence": {
+        "source": "KCDC + KSCCM 2024 패혈증 가이드라인",
+        "page": 41
+      }
+    },
+    {
+      "rule_id": "SEPSIS_RESPIRATORY_DISTRESS",
+      "priority": "HIGH",
+      "condition": {
+        "all": [
+          {"rr_gt": 25},
+          {"spo2_lt": 94}
+        ]
+      },
+      "action": "빈호흡 + 저산소증 → 호흡부전 동반 가능성",
+      "evidence": {
+        "source": "KCDC + KSCCM 2024 패혈증 가이드라인",
+        "page": 53
+      }
+    },
+    {
+      "rule_id": "SEPSIS_EARLY_ANTIBIOTICS",
+      "priority": "STAT",
+      "condition": {
+        "any": [
+          {"lactate_ge": 2.0},
+          {"sbp_lt": 90},
+          {"map_lt": 65}
+        ]
+      },
+      "action": "패혈증 의심 → Blood culture 채취 및 1시간 내 항생제 투여 고려",
+      "evidence": {
+        "source": "KCDC + KSCCM 2024 패혈증 가이드라인",
+        "page": 43
+      }
+    }
+  ]
+}
