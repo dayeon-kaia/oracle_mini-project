@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-VectorDB RAG 검증 스크립트
+호흡/환기 가이드라인 쿼리 테스트
 """
 
 import os
@@ -15,10 +15,10 @@ PERSIST_DIR = os.getenv("PERSIST_DIR", "./db_medical_md")
 COLLECTION_NAME = os.getenv("COLLECTION_NAME", "medical_md")
 HF_MODEL = os.getenv("HF_MODEL", "BAAI/bge-m3")
 
-def test_rag_queries():
-    """RAG 쿼리 테스트"""
+def test_respiratory_queries():
+    """호흡 가이드라인 쿼리 테스트"""
     print("=" * 80)
-    print("🧪 RAG VectorDB 검증 테스트")
+    print("🧪 호흡/환기 + 패혈증 통합 VectorDB 테스트")
     print("=" * 80)
     
     embeddings = HuggingFaceEmbeddings(
@@ -36,29 +36,34 @@ def test_rag_queries():
     # 테스트 쿼리
     test_cases = [
         {
-            "name": "젖산 측정",
-            "query": "패혈증 환자에서 젖산을 언제 측정해야 하나요?",
-            "expected_keywords": ["젖산", "lactate", "측정"]
+            "name": "호흡곤란 산소 투여",
+            "query": "호흡곤란 환자에게 산소를 어떻게 투여하나요?",
+            "expected_bundle": "RESPIRATORY"
         },
         {
-            "name": "수액 소생술",
-            "query": "패혈쇼크 환자에게 수액을 얼마나 투여해야 하나요?",
-            "expected_keywords": ["30 ml/kg", "수액", "3시간"]
+            "name": "ARDS 복와위",
+            "query": "ARDS 환자 복와위 요법은 언제 시행하나요?",
+            "expected_bundle": "RESPIRATORY"
         },
         {
-            "name": "승압제 선택",
-            "query": "패혈쇼크에서 승압제는 무엇을 사용하나요?",
-            "expected_keywords": ["norepinephrine", "노르에피네프린"]
+            "name": "NIV 적응증",
+            "query": "NIV는 언제 시작하나요?",
+            "expected_bundle": "RESPIRATORY"
         },
         {
-            "name": "항생제 투여",
-            "query": "패혈증 환자 항생제는 언제 투여하나요?",
-            "expected_keywords": ["1시간", "항생제", "광범위"]
+            "name": "기관삽관 기준",
+            "query": "기관삽관은 언제 해야 하나요?",
+            "expected_bundle": "RESPIRATORY"
         },
         {
-            "name": "MAP 목표",
-            "query": "패혈쇼크에서 혈압 목표는?",
-            "expected_keywords": ["MAP", "65", "mmHg"]
+            "name": "패혈증 젖산 (기존)",
+            "query": "패혈증 환자 젖산 측정",
+            "expected_bundle": "SEPSIS"
+        },
+        {
+            "name": "패혈쇼크 승압제 (기존)",
+            "query": "패혈쇼크 승압제",
+            "expected_bundle": "SEPSIS"
         }
     ]
     
@@ -77,34 +82,32 @@ def test_rag_queries():
             
             for j, result in enumerate(results, 1):
                 meta = result.metadata
-                content_preview = result.page_content[:150].replace('\n', ' ')
+                content_preview = result.page_content[:120].replace('\n', ' ')
                 
                 print(f"  [{j}] {meta.get('card_id')}")
                 print(f"      Role: {meta.get('card_role')}")
-                print(f"      Section: {meta.get('section')}")
-                print(f"      Page: p{meta.get('page')}")
+                print(f"      Source: {meta.get('source')}")
                 
                 # bundle 파싱
                 bundle_str = meta.get('bundle', '[]')
                 try:
                     bundle = json.loads(bundle_str) if isinstance(bundle_str, str) else bundle_str
                     print(f"      Bundle: {bundle}")
+                    
+                    # expected bundle 확인
+                    if test['expected_bundle'] in bundle:
+                        print(f"      ✓ Correct bundle")
                 except:
                     print(f"      Bundle: {bundle_str}")
                 
                 print(f"      Content: {content_preview}...")
-                
-                # 키워드 매칭 확인
-                matched_keywords = [kw for kw in test['expected_keywords'] if kw.lower() in result.page_content.lower()]
-                if matched_keywords:
-                    print(f"      ✓ Matched keywords: {matched_keywords}")
                 print()
         else:
             print(f"✗ No results found\n")
     
     # 통계
     print(f"\n{'=' * 80}")
-    print(f"📈 VectorDB 통계")
+    print(f"📈 VectorDB 통합 통계")
     print(f"{'=' * 80}")
     
     collection = vectorstore._collection
@@ -113,28 +116,35 @@ def test_rag_queries():
     
     all_docs = collection.get(include=["metadatas"])
     if all_docs and all_docs["metadatas"]:
-        role_count = {}
-        section_count = {}
+        source_count = {}
+        bundle_count = {}
         
         for meta in all_docs["metadatas"]:
-            role = meta.get("card_role", "UNKNOWN")
-            section = meta.get("section", "UNKNOWN")
+            source = meta.get("source", "UNKNOWN")
+            source_count[source] = source_count.get(source, 0) + 1
             
-            role_count[role] = role_count.get(role, 0) + 1
-            section_count[section] = section_count.get(section, 0) + 1
+            # bundle 분석
+            bundle_str = meta.get("bundle", "[]")
+            try:
+                bundle = json.loads(bundle_str) if isinstance(bundle_str, str) else bundle_str
+                for b in bundle:
+                    bundle_count[b] = bundle_count.get(b, 0) + 1
+            except:
+                pass
         
-        print(f"\n  card_role 분포:")
-        for role, count in sorted(role_count.items()):
-            print(f"    - {role}: {count}")
+        print(f"\n  source 분포:")
+        for source, count in sorted(source_count.items()):
+            print(f"    - {source}: {count}")
         
-        print(f"\n  section 분포:")
-        for section, count in sorted(section_count.items()):
-            print(f"    - {section}: {count}")
+        print(f"\n  주요 bundle:")
+        for bundle, count in sorted(bundle_count.items(), key=lambda x: -x[1])[:15]:
+            print(f"    - {bundle}: {count}")
     
     print(f"\n{'=' * 80}")
-    print(f"✅ 검증 완료!")
+    print(f"✅ 테스트 완료!")
     print(f"{'=' * 80}")
+    print(f"\n💡 패혈증(26) + 호흡(51) = 총 {total_count}개 Evidence 통합 완료")
 
 
 if __name__ == "__main__":
-    test_rag_queries()
+    test_respiratory_queries()

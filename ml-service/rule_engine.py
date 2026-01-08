@@ -76,16 +76,28 @@ class RuleEngine:
             # Extract feature name and operator
             if key.endswith("_ge"):
                 feature = key[:-3]
-                return patient_features.get(feature, float("inf")) >= value
+                feature_value = patient_features.get(feature)
+                if feature_value is None:
+                    feature_value = float("inf")
+                return feature_value >= value
             elif key.endswith("_gt"):
                 feature = key[:-3]
-                return patient_features.get(feature, float("inf")) > value
+                feature_value = patient_features.get(feature)
+                if feature_value is None:
+                    feature_value = float("inf")
+                return feature_value > value
             elif key.endswith("_le"):
                 feature = key[:-3]
-                return patient_features.get(feature, float("-inf")) <= value
+                feature_value = patient_features.get(feature)
+                if feature_value is None:
+                    feature_value = float("-inf")
+                return feature_value <= value
             elif key.endswith("_lt"):
                 feature = key[:-3]
-                return patient_features.get(feature, float("-inf")) < value
+                feature_value = patient_features.get(feature)
+                if feature_value is None:
+                    feature_value = float("-inf")
+                return feature_value < value
             elif key.endswith("_eq"):
                 feature = key[:-3]
                 return patient_features.get(feature) == value

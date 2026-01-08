@@ -1,5 +1,12 @@
 # 환경 변수
 .env
+.env.*
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # Google OAuth 관련 파일 (절대 커밋 금지)
 token.pickle
@@ -40,3 +47,19 @@ data-pipeline/data/raw/hosp/
 mimic/
 v0/
 v0-query/
+
+# Vector DB & Storage (Large generated files)
+ml-service/db/
+ml-service/db_medical_md/
+ml-service/db_medical_md_backup*/
+ml-service/data/
+
+# Generated Data & Intermediate Files
+*.jsonl
+ml-service/guidelines/*.json
+ml-service/guidelines/*.txt
+ml-service/guidelines/db_medical_md/
+
+# Build Artifacts
+dist/
+build/

@@ -6,8 +6,9 @@ import api from '../../services/api';
 const PatientMonitor = ({ searchQuery, filterStatus, onPatientSelect, selectedPatientId }) => {
     const [patients, setPatients] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [sortBy, setSortBy] = useState('risk_mortality_24h');
+    const [sortBy, setSortBy] = useState('status'); // Default sort by status
     const [sortOrder, setSortOrder] = useState('desc');
+    const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
 
     // Fetch patients from backend
     useEffect(() => {
@@ -56,11 +57,70 @@ const PatientMonitor = ({ searchQuery, filterStatus, onPatientSelect, selectedPa
         return true;
     });
 
-    // Sort patients
+    // Sort patients with tie-breakers
     const sortedPatients = [...filteredPatients].sort((a, b) => {
-        const multiplier = sortOrder === 'desc' ? -1 : 1;
-        return (a[sortBy] - b[sortBy]) * multiplier;
+        // Helper to get sort value
+        const getSortValue = (patient, field) => {
+            if (field === 'status') {
+                const statusWeight = {
+                    'critical': 3,
+                    'high': 2,
+                    'warning': 2,
+                    'medium': 1,
+                    'low': 0,
+                    'stable': 0
+                };
+                return statusWeight[patient.status] || 0;
+            }
+            return patient[field] || 0;
+        };
+
+        const valA = getSortValue(a, sortBy);
+        const valB = getSortValue(b, sortBy);
+
+        // Primary Sort
+        if (valA !== valB) {
+            return sortOrder === 'desc' ? valB - valA : valA - valB;
+        }
+
+        // Tie-breaker 1: Mortality Rate (Always Descending)
+        if (a.mortality_risk !== b.mortality_risk) {
+            return b.mortality_risk - a.mortality_risk;
+        }
+
+        // Tie-breaker 2: Composite Risk (Always Descending)
+        return b.composite_risk - a.composite_risk;
     });
+
+    const toggleSort = (field) => {
+        if (sortBy === field) {
+            setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc');
+        } else {
+            setSortBy(field);
+            setSortOrder('desc'); // Default to descending when switching fields
+        }
+        setIsSortDropdownOpen(false);
+    };
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (isSortDropdownOpen && !event.target.closest(`.${styles.dropdownContainer}`)) {
+                setIsSortDropdownOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [isSortDropdownOpen]);
+
+    const sortOptions = [
+        { id: 'status', label: 'Status' },
+        { id: 'mortality_risk', label: 'Mortality Risk' },
+        { id: 'composite_risk', label: 'Composite Risk' },
+        { id: 'vent_risk', label: 'Vent Risk' },
+        { id: 'pressor_risk', label: 'Pressor Risk' }
+    ];
 
     return (
         <div className={styles.monitor}>
@@ -68,17 +128,49 @@ const PatientMonitor = ({ searchQuery, filterStatus, onPatientSelect, selectedPa
                 <div>
                     <h2 className={styles.title}>Active Patient Monitor</h2>
                     <p className={styles.subtitle}>
-                        Showing {sortedPatients.length} of {patients.length} patients • Sorted by Risk Score
+                        Showing {sortedPatients.length} of {patients.length} patients • Sorted by {sortOptions.find(o => o.id === sortBy)?.label}
                     </p>
                 </div>
 
                 <div className={styles.controls}>
-                    <button className="glass-btn">
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                            <path d="M2 5h12M2 8h8M2 11h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                        </svg>
-                        Filter
-                    </button>
+                    <div className={styles.dropdownContainer}>
+                        <button
+                            className={`glass-btn ${isSortDropdownOpen ? styles.activeFilter : ''}`}
+                            onClick={() => setIsSortDropdownOpen(!isSortDropdownOpen)}
+                        >
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                <path d="M2 5h12M2 8h8M2 11h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                            </svg>
+                            Sort: {sortOptions.find(o => o.id === sortBy)?.label}
+                            <svg
+                                width="12"
+                                height="12"
+                                viewBox="0 0 12 12"
+                                fill="none"
+                                style={{ transform: isSortDropdownOpen ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s' }}
+                            >
+                                <path d="M2 4L6 8L10 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                        </button>
+
+                        {isSortDropdownOpen && (
+                            <div className={`glass-panel ${styles.dropdownMenu}`}>
+                                {sortOptions.map(option => (
+                                    <button
+                                        key={option.id}
+                                        className={styles.dropdownItem}
+                                        onClick={() => toggleSort(option.id)}
+                                    >
+                                        <span className={styles.checkIcon}>
+                                            {sortBy === option.id && (sortOrder === 'desc' ? '↓' : '↑')}
+                                        </span>
+                                        {option.label}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
                     <button className="glass-btn" onClick={() => window.location.reload()}>
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                             <path d="M14 2L8 14L6 8L2 6L14 2Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
@@ -98,13 +190,13 @@ const PatientMonitor = ({ searchQuery, filterStatus, onPatientSelect, selectedPa
                         <thead>
                             <tr>
                                 <th>Patient Info</th>
-                                <th>Composite Risk</th>
-                                <th>Mortality (24h)</th>
-                                <th>Vent Start (12h)</th>
-                                <th>Pressor Start (12h)</th>
+                                <th onClick={() => toggleSort('composite_risk')} style={{ cursor: 'pointer' }}>Composite Risk</th>
+                                <th onClick={() => toggleSort('mortality_risk')} style={{ cursor: 'pointer' }}>Mortality (24h)</th>
+                                <th onClick={() => toggleSort('vent_risk')} style={{ cursor: 'pointer' }}>Vent Start (12h)</th>
+                                <th onClick={() => toggleSort('pressor_risk')} style={{ cursor: 'pointer' }}>Pressor Start (12h)</th>
                                 <th>MAP Trend</th>
                                 <th>Lactate Trend</th>
-                                <th>Status</th>
+                                <th onClick={() => toggleSort('status')} style={{ cursor: 'pointer' }}>Status</th>
                             </tr>
                         </thead>
                         <tbody>

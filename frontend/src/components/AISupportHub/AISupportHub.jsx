@@ -2,13 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import styles from './AISupportHub.module.css';
 
-const AISupportHub = ({ patient, onClose }) => {
+const AISupportHub = ({ patient, onClose, isFullScreen = false }) => {
     const [clinicalSummary, setClinicalSummary] = useState(null);
     const [protocol, setProtocol] = useState(null);
     const [guardianReport, setGuardianReport] = useState(null);
     const [loading, setLoading] = useState(false);
     const [vitalsVizType, setVitalsVizType] = useState('area'); // area, line, heatmap
     const [activeTab, setActiveTab] = useState('summary'); // summary, protocol, guardian
+    const [selectedProtocol, setSelectedProtocol] = useState(null);
+    const [showProtocolModal, setShowProtocolModal] = useState(false);
 
     // Mock SHAP values - will be replaced with real data
     const shap_features = [
@@ -18,6 +20,36 @@ const AISupportHub = ({ patient, onClose }) => {
         { feature: 'MAP_mean', value: '-0.08', impact: 'medium' },
         { feature: 'HR_variance', value: '+0.06', impact: 'low' }
     ];
+
+    // Handle view protocol
+    const handleViewProtocol = (rec) => {
+        setSelectedProtocol(rec);
+        setShowProtocolModal(true);
+    };
+
+    // Handle view source
+    const handleViewSource = (source, page) => {
+        // Map source to PDF path
+        let pdfPath = '';
+        if (source.includes('패혈증') || source.includes('질병관리청')) {
+            pdfPath = '/guidelines/2024_질병관리청_성인_패혈증_초기치료지침서.pdf';
+        } else if (source.includes('호흡') || source.includes('ARDS')) {
+            pdfPath = '/guidelines/2016_대한중환자의학회_ARDS지침서.pdf';
+        } else if (source.includes('AKI') || source.includes('신손상')) {
+            pdfPath = '/guidelines/급성_신손상의_정의와_평가_임상진료지침.pdf';
+        } else {
+            pdfPath = '/guidelines/Clinical_Guidelines.pdf';
+        }
+
+        const url = page ? `${pdfPath}#page=${page}` : pdfPath;
+        window.open(url, '_blank');
+    };
+
+    // Close modal
+    const closeModal = () => {
+        setShowProtocolModal(false);
+        setSelectedProtocol(null);
+    };
 
     // Fetch LLM clinical summary from ML service
     useEffect(() => {
@@ -174,12 +206,16 @@ const AISupportHub = ({ patient, onClose }) => {
                                 '가이드라인 참조 필요';
 
                             const source = data.evidence?.[0]?.doc_title || 'Clinical Guidelines';
+                            const page = data.evidence?.[0]?.page || null;
 
                             return {
                                 condition: cond.condition,
                                 action: action,
                                 source: source,
-                                severity: cond.severity
+                                page: page,
+                                severity: cond.severity,
+                                fullProtocol: data.protocol,  // Store full protocol
+                                evidence: data.evidence || []  // Store evidence list
                             };
                         } catch (error) {
                             console.error(`Failed to fetch for ${cond.condition}:`, error);
@@ -187,7 +223,10 @@ const AISupportHub = ({ patient, onClose }) => {
                                 condition: cond.condition,
                                 action: '프로토콜 로딩 실패',
                                 source: 'N/A',
-                                severity: cond.severity
+                                page: null,
+                                severity: cond.severity,
+                                fullProtocol: null,
+                                evidence: []
                             };
                         }
                     })
@@ -292,11 +331,11 @@ const AISupportHub = ({ patient, onClose }) => {
 
     return (
         <>
-            {/* Overlay */}
-            <div className={styles.overlay} onClick={onClose}></div>
+            {/* Overlay - only show in modal mode */}
+            {!isFullScreen && <div className={styles.overlay} onClick={onClose}></div>}
 
-            {/* Sliding Panel */}
-            <aside className={styles.panel}>
+            {/* Sliding Panel or Full Screen Container */}
+            <aside className={isFullScreen ? styles.fullScreenContainer : styles.panel}>
                 {/* Header */}
                 <div className={styles.header}>
                     <div className={styles.headerContent}>
@@ -306,10 +345,22 @@ const AISupportHub = ({ patient, onClose }) => {
                             </h2>
                             <p className={styles.subtitle}>ICU Unit: {patient.raw?.icu_unit || 'N/A'}</p>
                         </div>
-                        <button className={`glass-btn ${styles.closeBtn}`} onClick={onClose}>
-                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                                <path d="M5 5L15 15M15 5L5 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                            </svg>
+                        <button
+                            className={isFullScreen ? styles.backButton : `glass-btn ${styles.closeBtn}`}
+                            onClick={onClose}
+                        >
+                            {isFullScreen ? (
+                                <>
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ marginRight: '0.5rem' }}>
+                                        <path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                    Back to Dashboard
+                                </>
+                            ) : (
+                                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                    <path d="M5 5L15 15M15 5L5 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                                </svg>
+                            )}
                         </button>
                     </div>
                 </div>
@@ -317,72 +368,24 @@ const AISupportHub = ({ patient, onClose }) => {
                 {/* Content */}
                 <div className={styles.content}>
                     {/* Tab Navigation */}
-                    <div style={{
-                        display: 'flex',
-                        gap: '0.75rem',
-                        marginBottom: '1.5rem',
-                        borderBottom: '2px solid rgba(255, 255, 255, 0.1)',
-                        paddingBottom: '1rem'
-                    }}>
+                    <div className={styles.tabsContainer}>
                         <button
-                            className={`glass-btn ${styles.tabBtn}`}
+                            className={`${styles.tabBtn} glass-btn ${activeTab === 'summary' ? styles.activeTab : ''}`}
                             onClick={() => setActiveTab('summary')}
-                            style={{
-                                padding: '0.75rem 1.5rem',
-                                background: activeTab === 'summary' ? 'linear-gradient(135deg, rgba(168, 85, 247, 0.3), rgba(139, 92, 246, 0.3))' : 'rgba(0, 0, 0, 0.3)',
-                                border: `2px solid ${activeTab === 'summary' ? '#a855f7' : 'rgba(255, 255, 255, 0.2)'}`,
-                                borderRadius: '0.75rem',
-                                color: activeTab === 'summary' ? '#e9d5ff' : 'rgba(255, 255, 255, 0.7)',
-                                fontWeight: activeTab === 'summary' ? '700' : '500',
-                                fontSize: '0.95rem',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.5rem',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s ease'
-                            }}
                         >
                             <span>✨</span>
                             AI Summary & SHAP Insights
                         </button>
                         <button
-                            className={`glass-btn ${styles.tabBtn}`}
+                            className={`${styles.tabBtn} glass-btn ${activeTab === 'protocol' ? styles.activeTab : ''}`}
                             onClick={() => setActiveTab('protocol')}
-                            style={{
-                                padding: '0.75rem 1.5rem',
-                                background: activeTab === 'protocol' ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.3), rgba(22, 163, 74, 0.3))' : 'rgba(0, 0, 0, 0.3)',
-                                border: `2px solid ${activeTab === 'protocol' ? '#22c55e' : 'rgba(255, 255, 255, 0.2)'}`,
-                                borderRadius: '0.75rem',
-                                color: activeTab === 'protocol' ? '#bbf7d0' : 'rgba(255, 255, 255, 0.7)',
-                                fontWeight: activeTab === 'protocol' ? '700' : '500',
-                                fontSize: '0.95rem',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.5rem',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s ease'
-                            }}
                         >
                             <span>📋</span>
                             Protocol Guide
                         </button>
                         <button
-                            className={`glass-btn ${styles.tabBtn}`}
+                            className={`${styles.tabBtn} glass-btn ${activeTab === 'guardian' ? styles.activeTab : ''}`}
                             onClick={() => setActiveTab('guardian')}
-                            style={{
-                                padding: '0.75rem 1.5rem',
-                                background: activeTab === 'guardian' ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(37, 99, 235, 0.3))' : 'rgba(0, 0, 0, 0.3)',
-                                border: `2px solid ${activeTab === 'guardian' ? '#3b82f6' : 'rgba(255, 255, 255, 0.2)'}`,
-                                borderRadius: '0.75rem',
-                                color: activeTab === 'guardian' ? '#bfdbfe' : 'rgba(255, 255, 255, 0.7)',
-                                fontWeight: activeTab === 'guardian' ? '700' : '500',
-                                fontSize: '0.95rem',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.5rem',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s ease'
-                            }}
                         >
                             <span>👨‍👩‍👧</span>
                             Guardian Report
@@ -390,16 +393,7 @@ const AISupportHub = ({ patient, onClose }) => {
                     </div>
 
                     {/* Ethical Disclaimer Notice */}
-                    <div style={{
-                        padding: '0.75rem 1rem',
-                        background: 'rgba(234, 179, 8, 0.15)',
-                        border: '1px solid rgba(234, 179, 8, 0.3)',
-                        borderRadius: '0.5rem',
-                        marginBottom: '1rem',
-                        fontSize: '0.85rem',
-                        color: '#fde047',
-                        lineHeight: 1.5
-                    }}>
+                    <div className={styles.disclaimer}>
                         ⚠️ 본 예측 결과는 임상 의사결정을 보조하기 위한 참고 정보이며, 단독으로 치료 결정에 사용되어서는 안 됩니다.
                     </div>
 
@@ -668,6 +662,24 @@ const AISupportHub = ({ patient, onClose }) => {
                                                         <p className={styles.conditionLabel}>{rec.condition}</p>
                                                         <p className={styles.actionText}>→ {rec.action}</p>
                                                         <p className={styles.source}>📚 {rec.source}</p>
+
+                                                        {/* Action Buttons */}
+                                                        <div className={styles.actionButtons}>
+                                                            {rec.fullProtocol && (
+                                                                <button
+                                                                    className={`glass-btn ${styles.protocolViewBtn}`}
+                                                                    onClick={() => handleViewProtocol(rec)}
+                                                                >
+                                                                    📋 프로토콜 보기
+                                                                </button>
+                                                            )}
+                                                            <button
+                                                                className={`glass-btn ${styles.sourceViewBtn}`}
+                                                                onClick={() => handleViewSource(rec.source, rec.page)}
+                                                            >
+                                                                📄 원문 보기
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                     <button className={styles.actionButton}>실행</button>
                                                 </div>
@@ -696,11 +708,11 @@ const AISupportHub = ({ patient, onClose }) => {
                             </div>
 
                             {!guardianReport ? (
-                                <div className={`${styles.protocolBox} glass-card`} style={{ padding: '2rem', textAlign: 'center' }}>
+                                <div className={`${styles.contentBox} glass-card ${styles.guardianPlaceholder}`}>
                                     <div style={{ marginBottom: '1.5rem' }}>
-                                        <span style={{ fontSize: '3rem' }}>👨‍⚕️</span>
-                                        <h4 style={{ margin: '1rem 0 0.5rem 0', color: '#bfdbfe', fontSize: '1.2rem' }}>의료진 승인 필요</h4>
-                                        <p style={{ color: 'rgba(156, 163, 175, 1)', lineHeight: 1.6 }}>
+                                        <span className={styles.guardianPlaceholderIcon}>👨‍⚕️</span>
+                                        <h4 className={styles.guardianPlaceholderTitle}>의료진 승인 필요</h4>
+                                        <p className={styles.guardianText}>
                                             보호자용 리포트는 의료진의 승인 후 생성됩니다.<br />
                                             승인시 AI 보조 기능에 제공 가능한 안내문이 생성됩니다.
                                         </p>
@@ -722,23 +734,23 @@ const AISupportHub = ({ patient, onClose }) => {
                                     </div>
                                 </div>
                             ) : (
-                                <div className={`${styles.protocolBox} glass-card`} style={{ padding: '1.5rem' }}>
+                                <div className={`${styles.contentBox} glass-card`} style={{ padding: '1.5rem' }}>
                                     {guardianReport.approved ? (
                                         <>
-                                            <div style={{ marginBottom: '1rem', padding: '0.75rem', background: 'rgba(34, 197, 94, 0.2)', borderRadius: '0.5rem', textAlign: 'center' }}>
-                                                <span style={{ color: '#bbf7d0', fontWeight: 600 }}>✅ 승인됨: {guardianReport.approved_by}</span>
+                                            <div className={styles.guardianApproved}>
+                                                <span>✅ 승인됨: {guardianReport.approved_by}</span>
                                             </div>
-                                            <div style={{ marginBottom: '1.5rem', padding: '1rem', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '0.5rem', borderLeft: '4px solid #3b82f6' }}>
-                                                <h4 style={{ margin: '0 0 0.5rem 0', color: '#bfdbfe', fontSize: '1.1rem', fontWeight: 600 }}>환자 상태</h4>
-                                                <p style={{ margin: 0, color: 'rgba(229, 231, 235, 1)', lineHeight: 1.6 }}>{guardianReport.simple_explanation}</p>
+                                            <div className={`${styles.guardianSection} ${styles.guardianStatus}`}>
+                                                <h4 className={styles.guardianTitle}>환자 상태</h4>
+                                                <p className={styles.guardianText}>{guardianReport.simple_explanation}</p>
                                             </div>
-                                            <div style={{ marginBottom: '1.5rem', padding: '1rem', background: 'rgba(234, 179, 8, 0.1)', borderRadius: '0.5rem', borderLeft: '4px solid #eab308' }}>
-                                                <h4 style={{ margin: '0 0 0.5rem 0', color: '#fde047', fontSize: '1.1rem', fontWeight: 600 }}>예상되는 상황</h4>
-                                                <p style={{ margin: 0, color: 'rgba(229, 231, 235, 1)', lineHeight: 1.6 }}>{guardianReport.what_to_expect}</p>
+                                            <div className={`${styles.guardianSection} ${styles.guardianExpected}`}>
+                                                <h4 className={styles.guardianTitle}>예상되는 상황</h4>
+                                                <p className={styles.guardianText}>{guardianReport.what_to_expect}</p>
                                             </div>
-                                            <div style={{ padding: '1rem', background: 'rgba(34, 197, 94, 0.1)', borderRadius: '0.5rem', borderLeft: '4px solid #22c55e' }}>
-                                                <h4 style={{ margin: '0 0 0.5rem 0', color: '#bbf7d0', fontSize: '1.1rem', fontWeight: 600 }}>보호자 안내</h4>
-                                                <p style={{ margin: 0, color: 'rgba(229, 231, 235, 1)', lineHeight: 1.6 }}>{guardianReport.family_guidance}</p>
+                                            <div className={`${styles.guardianSection} ${styles.guardianGuidance}`}>
+                                                <h4 className={styles.guardianTitle}>보호자 안내</h4>
+                                                <p className={styles.guardianText}>{guardianReport.family_guidance}</p>
                                             </div>
                                             <div style={{ marginTop: '1.5rem', display: 'flex', gap: '1rem', justifyContent: 'center' }}>
                                                 <button
@@ -776,6 +788,73 @@ const AISupportHub = ({ patient, onClose }) => {
                     )}
                 </div>
             </aside>
+
+            {/* Protocol Modal */}
+            {showProtocolModal && selectedProtocol && selectedProtocol.fullProtocol && (
+                <div className={styles.modalOverlay} onClick={closeModal}>
+                    <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
+                        <div className={styles.modalHeader}>
+                            <h2>{selectedProtocol.fullProtocol.title || '프로토콜 상세'}</h2>
+                            <button className={styles.closeBtn} onClick={closeModal}>✕</button>
+                        </div>
+
+                        <div className={styles.modalBody}>
+                            {selectedProtocol.fullProtocol.steps && selectedProtocol.fullProtocol.steps.length > 0 ? (
+                                <div className={styles.protocolSteps}>
+                                    {selectedProtocol.fullProtocol.steps.map((step, idx) => (
+                                        <div key={idx} className={styles.protocolStep}>
+                                            <div className={styles.stepHeader}>
+                                                <span className={styles.stepNumber}>{step.order || idx + 1}</span>
+                                                <h3>{step.title || `Step ${idx + 1}`}</h3>
+                                            </div>
+                                            {step.actions && step.actions.length > 0 && (
+                                                <ul className={styles.stepActions}>
+                                                    {step.actions.map((action, actionIdx) => (
+                                                        <li key={actionIdx}>{action}</li>
+                                                    ))}
+                                                </ul>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p style={{ color: 'var(--text-secondary)', textAlign: 'center' }}>
+                                    프로토콜 상세 정보를 로드할 수 없습니다.
+                                </p>
+                            )}
+
+                            {selectedProtocol.fullProtocol.disclaimer && (
+                                <div className={styles.protocolFooter}>
+                                    <p className={styles.disclaimer}>
+                                        ⚠️ {selectedProtocol.fullProtocol.disclaimer}
+                                    </p>
+                                </div>
+                            )}
+
+                            {selectedProtocol.source && (
+                                <div className={styles.protocolFooter}>
+                                    <p className={styles.modalSource}>
+                                        출처: {selectedProtocol.source}
+                                        {selectedProtocol.page && ` (p.${selectedProtocol.page})`}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className={styles.modalActions}>
+                            <button
+                                className={`glass-btn ${styles.sourceViewBtn}`}
+                                onClick={() => handleViewSource(selectedProtocol.source, selectedProtocol.page)}
+                            >
+                                📄 원문 보기
+                            </button>
+                            <button className="glass-btn" onClick={closeModal}>
+                                닫기
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 };

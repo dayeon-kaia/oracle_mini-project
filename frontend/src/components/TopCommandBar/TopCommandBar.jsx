@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ThemeToggle } from '../ThemeToggle/ThemeToggle';
 import AISearchBar from './AISearchBar';
 import styles from './TopCommandBar.module.css';
 
@@ -47,6 +48,10 @@ const TopCommandBar = ({ user, onLogout, onSearch, onToggleNLQ, showSearch = tru
                         <span className={styles.statusDot}></span>
                         <span className={styles.statusText}>System Active</span>
                     </div>
+
+                    {/* Theme Toggle */}
+                    <ThemeToggle />
+
                     {user && (
                         <>
                             <span className={styles.userName}>{user.name}</span>

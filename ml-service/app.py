@@ -368,8 +368,8 @@ def package_evidence_for_ui(evidence: list, used_ids: set):
         out.append(
             {
                 "id": e["evidence_id"],
-                "doc_title": citation_text,  # Use citations instead of source
-                "page": None,  # No page numbers in our VectorDB
+                "doc_title": meta.get("card_title") or citation_text,
+                "page": meta.get("page"),
                 "snippet": snippet,
             }
         )

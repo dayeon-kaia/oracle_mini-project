@@ -43,15 +43,15 @@
 }
 
 .statusPill {
-  background: rgba(0, 245, 255, 0.12);
-  color: var(--neon-cyan);
-  border: 1px solid rgba(0, 245, 255, 0.3);
+  background: var(--muted);
+  color: var(--primary);
+  border: 1px solid var(--border);
 }
 
 .backendPill {
-  background: rgba(168, 85, 247, 0.12);
-  color: var(--neon-purple);
-  border: 1px solid rgba(168, 85, 247, 0.3);
+  background: var(--muted);
+  color: var(--secondary-foreground);
+  border: 1px solid var(--border);
 }
 
 .select {
@@ -78,6 +78,16 @@
   display: flex;
   flex-direction: column;
   gap: var(--spacing-sm);
+  background: rgba(59, 130, 246, 0.08);
+  /* Light Blue Tint */
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+:global(html:not(.dark)) .panel {
+  background: rgba(59, 130, 246, 0.04);
+  border-color: rgba(59, 130, 246, 0.15);
 }
 
 .panelHeader {
@@ -112,6 +122,27 @@
   flex-wrap: wrap;
 }
 
+/* Apply visible styles to ALL glass buttons in the console */
+.console :global(.glass-btn) {
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--primary);
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.console :global(.glass-btn):hover {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: rgba(59, 130, 246, 0.6);
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.2);
+}
+
+:global(html:not(.dark)) .console :global(.glass-btn) {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.3);
+  color: #2563eb;
+}
+
 .optionGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -144,11 +175,12 @@
 }
 
 .historyItem {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(59, 130, 246, 0.05);
+  /* Lighter tint for items */
+  border: 1px solid rgba(59, 130, 246, 0.15);
   border-radius: var(--radius-sm);
   padding: var(--spacing-sm);
-  color: var(--text-primary);
+  color: var(--card-foreground);
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -159,7 +191,8 @@
 }
 
 .historyItem:hover {
-  background: rgba(255, 255, 255, 0.07);
+  background: var(--accent);
+  color: var(--accent-foreground);
 }
 
 .historyQuestion {
@@ -219,9 +252,9 @@
 }
 
 .tabButton {
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  background: var(--muted);
+  color: var(--muted-foreground);
   padding: 6px 12px;
   font-size: 0.75rem;
   letter-spacing: 0.08em;
@@ -231,9 +264,9 @@
 }
 
 .tabActive {
-  color: var(--neon-cyan);
-  border-color: rgba(0, 245, 255, 0.4);
-  background: rgba(0, 245, 255, 0.1);
+  color: var(--primary-foreground);
+  border-color: var(--primary);
+  background: var(--primary);
 }
 
 .resultBody {
@@ -290,9 +323,9 @@
 }
 
 .warningBox {
-  background: rgba(245, 158, 11, 0.12);
-  border: 1px solid rgba(245, 158, 11, 0.3);
-  color: #fcd34d;
+  background: var(--muted);
+  border: 1px solid var(--border);
+  color: var(--foreground);
   padding: var(--spacing-sm);
   border-radius: var(--radius-sm);
   font-size: 0.75rem;
@@ -327,13 +360,13 @@
 
 .sqlCode {
   white-space: pre-wrap;
-  background: rgba(15, 23, 42, 0.6);
+  background: var(--muted);
   border-radius: var(--radius-md);
   padding: var(--spacing-md);
   font-size: 0.8rem;
-  color: var(--text-primary);
+  color: var(--foreground);
   font-family: var(--font-mono);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border);
 }
 
 .logList {
@@ -347,9 +380,9 @@
   grid-template-columns: 12px 1fr;
   gap: var(--spacing-sm);
   padding: var(--spacing-sm);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--card);
 }
 
 .logStatus {

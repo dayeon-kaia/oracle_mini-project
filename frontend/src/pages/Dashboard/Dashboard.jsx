@@ -17,7 +17,7 @@ function Dashboard() {
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState(null);
-  const [viewMode, setViewMode] = useState("dashboard"); // 'dashboard' | 'nlq'
+  const [viewMode, setViewMode] = useState("dashboard"); // 'dashboard' | 'nlq' | 'patient_detail'
 
   useEffect(() => {
     const savedUser = localStorage.getItem("user");
@@ -44,10 +44,12 @@ function Dashboard() {
 
   const handlePatientSelect = (patient) => {
     setSelectedPatient(patient);
+    setViewMode('patient_detail');
   };
 
   const handleClosePanel = () => {
     setSelectedPatient(null);
+    setViewMode('dashboard');
   };
 
   const handleSearch = async (query) => {
@@ -76,6 +78,10 @@ function Dashboard() {
           <div className="dashboard-main" style={{ display: 'block', height: 'calc(100vh - 60px)', overflow: 'hidden', padding: '1rem' }}>
             <QueryConsole initialQuery={searchQuery} />
           </div>
+        ) : viewMode === 'patient_detail' && selectedPatient ? (
+          <div className="dashboard-main" style={{ display: 'block', height: 'calc(100vh - 60px)', overflow: 'hidden' }}>
+            <AISupportHub patient={selectedPatient} onClose={handleClosePanel} isFullScreen={true} />
+          </div>
         ) : (
           <div className="dashboard-main">
             <aside className="dashboard-sidebar">
@@ -90,12 +96,10 @@ function Dashboard() {
                 selectedPatientId={selectedPatient?.patient_id}
               />
             </main>
-
-            {selectedPatient && (
-              <AISupportHub patient={selectedPatient} onClose={handleClosePanel} />
-            )}
           </div>
         )}
+
+        <Footer />
       </div>
     );
   }
@@ -121,6 +125,8 @@ function Dashboard() {
             <GuidelineCards />
           </main>
         </div>
+
+        <Footer />
       </div>
     );
   }
@@ -184,6 +190,23 @@ function GuidelineCards() {
         </ul>
       </div>
     </div>
+  );
+}
+
+// Footer Component
+function Footer() {
+  return (
+    <footer className="dashboard-footer">
+      <div className="footer-content">
+        <div className="footer-disclaimer">
+          <span className="disclaimer-icon">⚕️</span>
+          <span>본 시스템은 의사 결정 보조 도구입니다. 최종 판단은 의사에게 있습니다.</span>
+        </div>
+        <div className="footer-copyright">
+          © {new Date().getFullYear()} fire4birds. All rights reserved.
+        </div>
+      </div>
+    </footer>
   );
 }
 
