@@ -28,9 +28,9 @@ airflow/logs/*
 !airflow/logs/.gitkeep
 
 # data
-20251231.ipynb 
-20260102.ipynb 
 data.ipynb 
 mimic_total.*
+data-pipeline/data/duckdb/
+data-pipeline/models/
 data-pipeline/data/processed/*.csv
 data-pipeline/data/raw/hosp/
