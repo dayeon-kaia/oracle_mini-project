@@ -17,7 +17,8 @@ function Dashboard() {
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState(null);
-  const [viewMode, setViewMode] = useState("dashboard"); // 'dashboard' | 'nlq' | 'patient_detail'
+  const [viewMode, setViewMode] = useState("dashboard"); // 'dashboard' | 'patient_detail'
+  const [showNLQ, setShowNLQ] = useState(false);
 
   useEffect(() => {
     const savedUser = localStorage.getItem("user");
@@ -52,14 +53,20 @@ function Dashboard() {
     setViewMode('dashboard');
   };
 
+  const handleHome = () => {
+    setViewMode("dashboard");
+    setShowNLQ(false);
+    setSelectedPatient(null);
+  };
+
   const handleSearch = async (query) => {
     setSearchQuery(query);
-    setViewMode("nlq");
+    setShowNLQ(true); // Open NLQ on search
     console.log("Search query:", query);
   };
 
   const handleToggleNLQ = () => {
-    setViewMode(prev => prev === 'dashboard' ? 'nlq' : 'dashboard');
+    setShowNLQ(true);
   };
 
   const handleMacroClick = (filterType) => {
@@ -72,13 +79,28 @@ function Dashboard() {
   if (role === "doctor") {
     return (
       <div className="dashboard-container">
-        <TopCommandBar user={user} onLogout={handleLogout} onSearch={handleSearch} onToggleNLQ={handleToggleNLQ} />
+        <TopCommandBar
+          user={user}
+          onLogout={handleLogout}
+          onSearch={handleSearch}
+          onToggleNLQ={handleToggleNLQ}
+          onHome={handleHome}
+        />
 
-        {viewMode === 'nlq' ? (
-          <div className="dashboard-main" style={{ display: 'block', height: 'calc(100vh - 60px)', overflow: 'hidden', padding: '1rem' }}>
-            <QueryConsole initialQuery={searchQuery} />
+        {showNLQ && (
+          <div className="nlq-overlay" style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.85)', zIndex: 2000,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '2rem'
+          }}>
+            <div style={{ width: '100%', maxWidth: '1400px', height: '90vh' }}>
+              <QueryConsole initialQuery={searchQuery} onClose={() => setShowNLQ(false)} />
+            </div>
           </div>
-        ) : viewMode === 'patient_detail' && selectedPatient ? (
+        )}
+
+        {viewMode === 'patient_detail' && selectedPatient ? (
           <div className="dashboard-main" style={{ display: 'block', height: 'calc(100vh - 60px)', overflow: 'hidden' }}>
             <AISupportHub patient={selectedPatient} onClose={handleClosePanel} isFullScreen={true} />
           </div>

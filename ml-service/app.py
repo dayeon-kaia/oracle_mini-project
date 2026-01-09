@@ -14,6 +14,7 @@ from clinical_summary import create_clinical_summary_generator
 from gentle_report import create_gentle_report_generator
 from qa_interface import create_qa_interface
 from context_classifier import classify_clinical_context
+from nlq_agent import query_csv_agent
 import re
 
 load_dotenv()
@@ -705,6 +706,48 @@ def query_endpoint():
         return jsonify(result)
     except Exception as e:
         return jsonify({"error": f"Query parsing failed: {str(e)}"}), 500
+
+
+@app.post("/api/nlq")
+def nlq_endpoint():
+    """
+    Experimental NLQ endpoint using Pandas Dataframe Agent
+    Input: {"question": "who has high lactate?"}
+    """
+    payload = request.get_json(force=True)
+    question = payload.get("question")
+    if not question:
+        return jsonify({"error": "question is required"}), 400
+    
+    # Run agent
+    try:
+        response = query_csv_agent(question)
+        if "error" in response:
+             return jsonify(response), 500
+        
+        # Format to match frontend expectation (approx)
+        # Frontend expects result columns/rows or at least a text answer
+        # The agent returns a string. We can wrap it.
+        return jsonify({
+            "request_id": f"req_{datetime.now().timestamp()}",
+            "question": question,
+            "sql": response.get("sql", "SQL generation failed or hidden"), 
+            "answer": response["answer"],
+            # Return actual data rows if available
+            "columns": response.get("columns", []),
+            "rows": response.get("rows", []), 
+            "row_count": len(response.get("rows", [])),
+            "logs": [
+                {
+                    "step": l.get("step"),
+                    "status": "success",
+                    "message": f"Action: {l.get('tool')}\nInput: {l.get('tool_input')}",
+                    "ts": datetime.now().isoformat()
+                } for l in response.get("logs", [])
+            ]
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == "__main__":

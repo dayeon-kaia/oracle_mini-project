@@ -1,10 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import styles from "./QueryConsole.module.css";
 
+const COLUMNS = ["stay_id", "charttime", "hr", "map", "lactate", "spo2", "temp", "risk_score"];
+
 const EXAMPLE_QUERIES = [
-  "stay_id 3456의 최근 24시간 HR, MAP, lactate 보여줘",
-  "지난 24시간 lactate가 4 이상이 한 번이라도 있었던 환자 10명",
-  "현재 활성 ICU 환자 중 예후 악화 가능성 높은 순으로 20명",
+  "HR이 100 이상인 환자는 몇명이야?",
+  "HR이 100 이상인 환자의 모든 정보 보여줘",
+  "Lactate 수치가 4.0 이상인 환자 찾아줘",
+  "MICU에 있는 환자 명단 보여줘",
+  "최근 24시간 동안 열이 38도 이상인 기록 보여줘",
+  "위험도(risk_score)가 0.8 이상인 고위험 환자 리스트",
+  "Sepsis 의심 환자(Lactate > 4, MAP < 65) 조회해줘"
 ];
 
 const STATUS_LABELS = {
@@ -58,7 +64,7 @@ function DataTable({ columns, rows }) {
         </thead>
         <tbody>
           {rows.map((row, rowIndex) => (
-            <tr key={`${rowIndex}-${row[columns[0]]}`}>
+            <tr key={rowIndex}>
               {columns.map((col) => (
                 <td key={`${rowIndex}-${col}`}>{row[col]}</td>
               ))}
@@ -70,20 +76,21 @@ function DataTable({ columns, rows }) {
   );
 }
 
-function QueryConsole({ initialQuery }) {
+function QueryConsole({ initialQuery, onClose }) {
   const [question, setQuestion] = useState(initialQuery || "");
   const [response, setResponse] = useState(null);
   const [history, setHistory] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [environment, setEnvironment] = useState("dev");
-  const [timeRange, setTimeRange] = useState("24h");
   const [limit, setLimit] = useState(50);
   const [activeTab, setActiveTab] = useState("result");
   const [copiedSql, setCopiedSql] = useState(false);
+  const [showExampleModal, setShowExampleModal] = useState(false);
 
   const handleRun = async (overrideQuestion = null) => {
     const queryTerm = typeof overrideQuestion === 'string' ? overrideQuestion : question;
-    if (!queryTerm.trim() || isLoading) return;
+    // Allow empty check to be bypassed if override provided, otherwise check state
+    if (!queryTerm.trim() || (isLoading && !overrideQuestion)) return;
 
     setIsLoading(true);
     setResponse(null);
@@ -95,7 +102,6 @@ function QueryConsole({ initialQuery }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           question: queryTerm,
-          timeRange: { preset: timeRange },
           limit,
         }),
       });
@@ -152,8 +158,13 @@ function QueryConsole({ initialQuery }) {
   };
 
   const handleUseExample = () => {
-    const randomExample = EXAMPLE_QUERIES[Math.floor(Math.random() * EXAMPLE_QUERIES.length)];
-    setQuestion(randomExample);
+    setShowExampleModal(true);
+  };
+
+  const handleSelectExample = (ex) => {
+    setQuestion(ex);
+    setShowExampleModal(false);
+    handleRun(ex);
   };
 
   const handleHistorySelect = (item) => {
@@ -223,6 +234,11 @@ function QueryConsole({ initialQuery }) {
             <option value="dev">Dev</option>
             <option value="prod">Prod</option>
           </select>
+          {onClose && (
+            <button className="glass-btn" onClick={onClose} style={{ marginLeft: '1rem' }}>
+              ✕ Close
+            </button>
+          )}
         </div>
       </header>
 
@@ -243,7 +259,7 @@ function QueryConsole({ initialQuery }) {
                   handleRun();
                 }
               }}
-              placeholder="예시:\n- stay_id 3456의 최근 24시간 HR, MAP, lactate 보여줘\n- 지난 24시간 lactate가 4 이상이 한 번이라도 있었던 환자 10명"
+              placeholder="질문을 입력하세요. (예: HR이 100 이상인 환자 보여줘)"
               disabled={isLoading}
             />
             <div className={styles.buttonRow}>
@@ -256,44 +272,21 @@ function QueryConsole({ initialQuery }) {
               <button className="glass-btn" onClick={handleUseExample} disabled={isLoading}>
                 Use Example
               </button>
-            </div>
-          </div>
 
-          <div className={`${styles.panel} glass-panel`}>
-            <div className={styles.panelHeader}>
-              <h3>Query Options</h3>
-              <span className={styles.panelHint}>SELECT only</span>
-            </div>
-            <div className={styles.optionGrid}>
-              <label>
-                <span>Time Range</span>
+              <div className={styles.limitControl}>
+                <span className={styles.limitLabel}>Limit:</span>
                 <select
-                  className={`${styles.select} glass-input`}
-                  value={timeRange}
-                  onChange={(event) => setTimeRange(event.target.value)}
-                  disabled={isLoading}
-                >
-                  <option value="6h">Last 6 hours</option>
-                  <option value="12h">Last 12 hours</option>
-                  <option value="24h">Last 24 hours</option>
-                  <option value="custom">Custom</option>
-                </select>
-              </label>
-              <label>
-                <span>Row Limit</span>
-                <select
-                  className={`${styles.select} glass-input`}
+                  className={`${styles.select} glass-input ${styles.limitSelect}`}
                   value={limit}
                   onChange={(event) => setLimit(Number(event.target.value))}
                   disabled={isLoading}
                 >
-                  <option value={50}>50 rows</option>
-                  <option value={100}>100 rows</option>
-                  <option value={200}>200 rows</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                  <option value={200}>200</option>
                 </select>
-              </label>
+              </div>
             </div>
-            <p className={styles.mutedNote}>Queries are read-only. Mutations are blocked.</p>
           </div>
 
           <div className={`${styles.panel} ${styles.historyPanel} glass-panel`}>
@@ -374,15 +367,21 @@ function QueryConsole({ initialQuery }) {
 
               {!isLoading && response && !response.error && activeTab === "result" && (
                 <div className={styles.resultStack}>
-                  {response.warnings.length > 0 && (
-                    <div className={styles.warningBox}>
-                      {response.warnings.map((warning, index) => (
-                        <p key={`${warning}-${index}`}>{warning}</p>
-                      ))}
+                  {/* Prioritize Table: If data exists, show table only (hide text summary to avoid duplication) */}
+                  {response.rows && response.rows.length > 0 ? (
+                    <div className={styles.resultStack}>
+                      <DataTable columns={response.columns} rows={response.rows} />
+                      <div className={styles.footerNote}>Showing {response.row_count} rows</div>
                     </div>
+                  ) : (
+                    /* Fallback to text answer if no table data */
+                    response.answer && (
+                      <div className={styles.answerBox}>
+                        <h4 className={styles.answerTitle}>🤖 AI Answer</h4>
+                        <p className={styles.answerText}>{response.answer}</p>
+                      </div>
+                    )
                   )}
-                  <DataTable columns={response.columns} rows={response.rows} />
-                  <div className={styles.footerNote}>Showing {response.row_count} rows</div>
                 </div>
               )}
 
@@ -425,6 +424,31 @@ function QueryConsole({ initialQuery }) {
           </div>
         </div>
       </div>
+      {showExampleModal && (
+        <div className={styles.modalOverlay}>
+          <div className={`${styles.modalContent} glass-card`}>
+            <div className={styles.modalHeader}>
+              <h3>💡 Query Examples</h3>
+              <button className="glass-btn" onClick={() => setShowExampleModal(false)}>
+                Close
+              </button>
+            </div>
+            <div className={styles.exampleList}>
+              {EXAMPLE_QUERIES.map((ex, idx) => (
+                <div key={idx} className={styles.exampleItem}>
+                  <p className={styles.exampleText}>{ex}</p>
+                  <button
+                    className={`${styles.searchBtn} glass-btn`}
+                    onClick={() => handleSelectExample(ex)}
+                  >
+                    Search
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

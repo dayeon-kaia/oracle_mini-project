@@ -3,12 +3,12 @@ import { ThemeToggle } from '../ThemeToggle/ThemeToggle';
 import AISearchBar from './AISearchBar';
 import styles from './TopCommandBar.module.css';
 
-const TopCommandBar = ({ user, onLogout, onSearch, onToggleNLQ, showSearch = true }) => {
+const TopCommandBar = ({ user, onLogout, onSearch, onToggleNLQ, onHome, showSearch = true }) => {
     return (
         <header className={styles.commandBar}>
             <div className={styles.container}>
                 {/* Logo / Title */}
-                <div className={styles.logo}>
+                <div className={styles.logo} onClick={onHome} style={{ cursor: 'pointer' }}>
                     <div className={styles.logoIcon}>
                         <span className="neon-text-ai">🏥</span>
                     </div>
