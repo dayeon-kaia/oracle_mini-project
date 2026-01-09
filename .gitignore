@@ -34,3 +34,7 @@ data-pipeline/data/duckdb/
 data-pipeline/models/
 data-pipeline/data/processed/*.csv
 data-pipeline/data/raw/hosp/
+
+
+*.csv
+*.pkl
