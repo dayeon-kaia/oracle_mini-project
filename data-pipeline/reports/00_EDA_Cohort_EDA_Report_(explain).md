@@ -11,6 +11,7 @@
 - **Number of Features:** 20
 
 ### Column Names and Data Types
+
 ```
 subject_id                : int64
 hadm_id                   : int64
@@ -79,14 +80,13 @@ max    1.999999e+07  2.999983e+07  3.999986e+07    226.403079     91.000000     
 
 ## 3. Missing Values Analysis
 
-| Column | Missing Count | Percentage |
-|--------|---------------|------------|
-| dod | 35,749 | 65.53% |
-| deathtime | 48,677 | 89.23% |
-| dnr_time | 28,922 | 53.02% |
-| vent_start_time | 31,631 | 57.98% |
-| pressor_start_time | 42,873 | 78.59% |
-
+| Column             | Missing Count | Percentage |
+| ------------------ | ------------- | ---------- |
+| dod                | 35,749        | 65.53%     |
+| deathtime          | 48,677        | 89.23%     |
+| dnr_time           | 28,922        | 53.02%     |
+| vent_start_time    | 31,631        | 57.98%     |
+| pressor_start_time | 42,873        | 78.59%     |
 
 사망 시점(deathtime, dod)과 중재 시작 시점(vent_start_time, pressor_start_time)에서
 높은 결측률이 관찰되지만, 이는 데이터 품질 문제라기보다
@@ -112,26 +112,25 @@ max    1.999999e+07  2.999983e+07  3.999986e+07    226.403079     91.000000     
 
 ### Gender Distribution
 
-| Gender | Count | Percentage |
-|--------|-------|------------|
-| M | 31,056 | 56.93% |
-| F | 23,495 | 43.07% |
+| Gender | Count  | Percentage |
+| ------ | ------ | ---------- |
+| M      | 31,056 | 56.93%     |
+| F      | 23,495 | 43.07%     |
 
 ### ICU Unit Distribution
 
-| ICU Unit | Count | Percentage |
-|----------|-------|------------|
-| Cardiac Vascular Intensive Care Unit (CV | 11,008 | 20.18% |
-| Medical Intensive Care Unit (MICU) | 9,942 | 18.23% |
-| Medical/Surgical Intensive Care Unit (MI | 7,957 | 14.59% |
-| Surgical Intensive Care Unit (SICU) | 7,458 | 13.67% |
-| Trauma SICU (TSICU) | 6,149 | 11.27% |
-| Coronary Care Unit (CCU) | 6,059 | 11.11% |
-| Neuro Intermediate | 3,779 | 6.93% |
-| Neuro Surgical Intensive Care Unit (Neur | 1,130 | 2.07% |
-| Neuro Stepdown | 865 | 1.59% |
-| Surgery/Vascular/Intermediate | 102 | 0.19% |
-
+| ICU Unit                                 | Count  | Percentage |
+| ---------------------------------------- | ------ | ---------- |
+| Cardiac Vascular Intensive Care Unit (CV | 11,008 | 20.18%     |
+| Medical Intensive Care Unit (MICU)       | 9,942  | 18.23%     |
+| Medical/Surgical Intensive Care Unit (MI | 7,957  | 14.59%     |
+| Surgical Intensive Care Unit (SICU)      | 7,458  | 13.67%     |
+| Trauma SICU (TSICU)                      | 6,149  | 11.27%     |
+| Coronary Care Unit (CCU)                 | 6,059  | 11.11%     |
+| Neuro Intermediate                       | 3,779  | 6.93%      |
+| Neuro Surgical Intensive Care Unit (Neur | 1,130  | 2.07%      |
+| Neuro Stepdown                           | 865    | 1.59%      |
+| Surgery/Vascular/Intermediate            | 102    | 0.19%      |
 
 성별 분포는 비교적 균형을 이루고 있으며,남성(56.9%)이 여성(43.1%)보다 다소 높은 비율을 보인다.
 
@@ -146,13 +145,13 @@ MICU, SICU, CVICU 등 주요 중환자실 유형이 고르게 포함되어 있�
 
 ### Age Distribution
 
-| Age Group | Count | Percentage |
-|-----------|-------|------------|
-| <30 | 2,619 | 4.80% |
-| 30-50 | 8,162 | 14.96% |
-| 50-65 | 16,534 | 30.31% |
-| 65-80 | 18,171 | 33.31% |
-| 80+ | 9,065 | 16.62% |
+| Age Group | Count  | Percentage |
+| --------- | ------ | ---------- |
+| <30       | 2,619  | 4.80%      |
+| 30-50     | 8,162  | 14.96%     |
+| 50-65     | 16,534 | 30.31%     |
+| 65-80     | 18,171 | 33.31%     |
+| 80+       | 9,065  | 16.62%     |
 
 ### Length of Stay (LOS) Distribution
 
@@ -199,6 +198,7 @@ los            -0.0371  1.0000
 LOS 및 사망 시점 분포를 통해 시간 기반(sliding window) 분석의 필요성을 확인하였다.
 
 ### LOS Distribution
+
 - 90th percentile: 8.99
 - 95th percentile: 13.89
 - 99th percentile: 28.09
@@ -224,4 +224,4 @@ ICU 재실 기간(LOS)은 본질적으로 우측으로 긴 꼬리를 가지는 �
 3. ICU Unit Statistics
 4. Missing Value Heatmap
 
-![Visualizations](EDA_Visualizations.png)
+![Visualizations](00_EDA_Visualizations.png)
