@@ -15,7 +15,7 @@
 
 const express = require("express");
 const router = express.Router();
-// const mlService = require('../services/mlService');  // ML 서비스 연결 시 주석 해제
+const mlService = require("../services/mlService"); // ML 서비스 연결 시 주석 해제
 
 // ========================
 // POST /api/prediction
@@ -42,28 +42,65 @@ const router = express.Router();
  * 4. 결과 DB 저장 후 반환
  */
 router.post("/", async (req, res) => {
-  const { patient_id } = req.body;
+  try {
+    const { patient_id, features } = req.body;
 
-  // TODO: ML 서비스 호출
-  // const prediction = await mlService.predict(patient_id);
+    if (!patient_id) {
+      return res.status(400).json({ error: "patient_id is required" });
+    }
 
-  res.json({
-    message: "예측 결과",
-    data: {
-      patient_id,
-      mortality: 0.75,
-      vent_start: 0.45,
-      pressors_start: 0.6,
-      shap_top5: [
-        { feature: "lactate", contribution: 0.23 },
-        { feature: "map_mean", contribution: 0.18 },
-        { feature: "heart_rate_std", contribution: 0.12 },
-        { feature: "spo2_min", contribution: 0.09 },
-        { feature: "creatinine", contribution: 0.07 },
-      ],
-      predicted_at: new Date().toISOString(),
-    },
-  });
+    // TODO: features 없으면 DB에서 조회해서 가져오기
+    // const features = await dbService.getPatientFeatures(patient_id);
+
+    // ML Service 호출
+    const result = await mlService.predict(patient_id, features || {});
+
+    res.json({
+      message: "예측 결과",
+      data: result,
+    });
+  } catch (error) {
+    console.error("예측 API 에러:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ========================
+// POST /api/prediction/batch
+// ========================
+/**
+ * 다중 환자 배치 예측
+ */
+router.post("/batch", async (req, res) => {
+  try {
+    const { patients } = req.body;
+
+    if (!patients || !Array.isArray(patients)) {
+      return res.status(400).json({ error: "patients array is required" });
+    }
+
+    // ML Service 배치 호출
+    const result = await mlService.predictBatch(patients);
+
+    res.json({
+      message: "배치 예측 결과",
+      data: result,
+    });
+  } catch (error) {
+    console.error("배치 예측 API 에러:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ========================
+// GET /api/prediction/health
+// ========================
+/**
+ * ML Service 상태 확인
+ */
+router.get("/health", async (req, res) => {
+  const status = await mlService.healthCheck();
+  res.json(status);
 });
 
 module.exports = router;

@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Early Deterioration Command Center - LLM Testing Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+            overflow-x: auto;
+        }
+
+        .tab {
+            padding: 16px 24px;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            font-size: 14px;
+            font-weight: 500;
+            color: #6c757d;
+            transition: all 0.3s;
+            white-space: nowrap;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab:hover {
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            background: white;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 30px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .form-group textarea,
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group textarea:focus,
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 32px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .result-box {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .result-box h3 {
+            font-size: 16px;
+            margin-bottom: 12px;
+            color: #333;
+        }
+
+        .result-box pre {
+            background: #282c34;
+            color: #abb2bf;
+            padding: 16px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .hint {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 6px;
+            font-style: italic;
+        }
+
+        .error {
+            background: #fff5f5;
+            border-left-color: #e53e3e;
+        }
+
+        .success {
+            background: #f0fff4;
+            border-left-color: #38a169;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏥 Early Deterioration Command Center</h1>
+            <p>LLM Testing Dashboard - LangChain 기반 임상 의사결정 지원 시스템</p>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('protocol-eval')">Protocol Evaluation</button>
+            <button class="tab" onclick="showTab('clinical-summary')">Clinical Summary</button>
+            <button class="tab" onclick="showTab('gentle-report')">Gentle Report</button>
+            <button class="tab" onclick="showTab('qa-interface')">Q&A Interface</button>
+            <button class="tab" onclick="showTab('protocol-rag')">Protocol RAG</button>
+        </div>
+
+        <!-- Protocol Evaluation Tab (NEW - First Tab) -->
+        <div id="protocol-eval" class="tab-content active">
+            <h2 style="margin-bottom: 20px;">환자 기반 프로토콜 평가</h2>
+            <p style="margin-bottom: 20px; color: #6c757d;">환자의 생체 신호를 입력하면 규칙 기반 프로토콜이 평가됩니다.</p>
+
+            <div class="form-group">
+                <label>Patient ID</label>
+                <input type="text" id="pe-patient_id" value="demo_001">
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px;">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>MAP (mmHg)</label>
+                    <input type="number" id="pe-map" step="0.1">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>SBP (mmHg)</label>
+                    <input type="number" id="pe-sbp" step="0.1">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>Lactate (mmol/L)</label>
+                    <input type="number" id="pe-lactate" step="0.1">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>SpO2 (%)</label>
+                    <input type="number" id="pe-spo2" step="0.1">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>FiO2 (0-1)</label>
+                    <input type="number" id="pe-fio2" step="0.01">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>Respiratory Rate</label>
+                    <input type="number" id="pe-rr" step="1">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>Urine Output (mL/kg/hr)</label>
+                    <input type="number" id="pe-urine" step="0.1">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>산소 투여</label>
+                    <select id="pe-oxygen">
+                        <option value="false">No</option>
+                        <option value="true">Yes</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>HFNC</label>
+                    <select id="pe-hfnc">
+                        <option value="false">No</option>
+                        <option value="true">Yes</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>기계환기</label>
+                    <select id="pe-vent">
+                        <option value="false">No</option>
+                        <option value="true">Yes</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>승압제</label>
+                    <select id="pe-pressor">
+                        <option value="false">No</option>
+                        <option value="true">Yes</option>
+                    </select>
+                </div>
+            </div>
+
+            <button class="btn" onclick="evaluateProtocols()">프로토콜 평가</button>
+            <button class="btn" style="margin-left: 10px; background: #28a745;" onclick="loadProtocolSampleData()">샘플
+                데이터 로드</button>
+
+            <div id="protocol-eval-result"></div>
+        </div>
+
+        <!-- Clinical Summary Tab -->
+        <div id="clinical-summary" class="tab-content active">
+            <h2 style="margin-bottom: 20px;">의료진용 임상 요약 (Clinical Summary)</h2>
+            <p style="margin-bottom: 20px; color: #6c757d;">환자의 vitals, labs, SHAP features를 기반으로 임상 요약을 생성합니다.</p>
+
+            <div class="form-group">
+                <label>Request JSON</label>
+                <textarea id="clinical-input" rows="15">{
+  "patient_id": "demo_001",
+  "vitals": {
+    "map": 58,
+    "sbp": 82,
+    "hr": 120,
+    "rr": 32,
+    "spo2": 89
+  },
+  "labs": {
+    "lactate": 4.2,
+    "wbc": 18,
+    "creatinine": 2.1
+  },
+  "shap_features": [
+    {"feature": "map_mean", "value": 58, "contribution": -0.35},
+    {"feature": "lactate_last", "value": 4.2, "contribution": 0.28},
+    {"feature": "hr_max", "value": 120, "contribution": 0.15}
+  ],
+  "prediction_risk": {
+    "mortality": 0.75,
+    "pressor": 0.85,
+    "vent": 0.45
+  },
+  "data_quality_flags": ["MAP 센서 간헐적 결측", "소변량 데이터 누락"]
+}</textarea>
+                <div class="hint">JSON 형식으로 환자 데이터를 입력하세요</div>
+            </div>
+
+            <button class="btn" onclick="testClinicalSummary()">Generate Summary</button>
+
+            <div id="clinical-result"></div>
+        </div>
+
+        <!-- Gentle Report Tab -->
+        <div id="gentle-report" class="tab-content">
+            <h2 style="margin-bottom: 20px;">보호자용 리포트 (Gentle Report)</h2>
+            <p style="margin-bottom: 20px; color: #6c757d;">임상 요약을 쉬운 언어로 변환합니다. <strong>의료진 승인 필요</strong></p>
+
+            <div class="form-group">
+                <label>Approved By (의료진 이름)</label>
+                <input type="text" id="approved-by" placeholder="Dr. Kim" value="Dr. Kim">
+                <div class="hint">의료진 승인이 필수입니다</div>
+            </div>
+
+            <div class="form-group">
+                <label>Clinical Summary Output (JSON)</label>
+                <textarea id="gentle-input" rows="12">{
+  "patient_id": "demo_001",
+  "risk_level": "high",
+  "summary": "지난 4시간 동안 평균동맥압(MAP) 하락, 젖산(Lactate) 수치 상승, 소변량 감소가 관찰되었습니다.",
+  "key_features": [
+    {"feature": "평균동맥압", "value": "58 mmHg"},
+    {"feature": "젖산 수치", "value": "4.2 mmol/L"},
+    {"feature": "소변량", "value": "0.3 ml/kg/hr"}
+  ]
+}</textarea>
+                <div class="hint">Clinical Summary 결과를 입력하세요</div>
+            </div>
+
+            <button class="btn" onclick="testGentleReport()">Generate Report</button>
+
+            <div id="gentle-result"></div>
+        </div>
+
+        <!-- Q&A Interface Tab -->
+        <div id="qa-interface" class="tab-content">
+            <h2 style="margin-bottom: 20px;">자연어 질의 처리 (Q&A Interface)</h2>
+            <p style="margin-bottom: 20px; color: #6c757d;">자연어 질의를 환자 필터 파라미터로 변환합니다.</p>
+
+            <div class="form-group">
+                <label>자연어 질의</label>
+                <input type="text" id="qa-input" placeholder="예: 최근 2시간 내 위험도 급상승한 환자 보여줘" value="Pressor 위험 상위 5명">
+                <div class="hint">자연어로 질문을 입력하세요</div>
+            </div>
+
+            <button class="btn" onclick="testQA()">Parse Query</button>
+
+            <div id="qa-result"></div>
+
+            <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                <h3 style="font-size: 14px; margin-bottom: 12px;">예시 질의</h3>
+                <ul style="list-style: none; padding: 0;">
+                    <li style="margin-bottom: 8px;">
+                        <button class="btn" style="padding: 8px 16px; font-size: 12px;"
+                            onclick="setQuery('최근 2시간 내 위험도 급상승한 환자 보여줘')">
+                            최근 2시간 내 위험도 급상승한 환자
+                        </button>
+                    </li>
+                    <li style="margin-bottom: 8px;">
+                        <button class="btn" style="padding: 8px 16px; font-size: 12px;"
+                            onclick="setQuery('Pressor 위험 상위 5명')">
+                            Pressor 위험 상위 5명
+                        </button>
+                    </li>
+                    <li style="margin-bottom: 8px;">
+                        <button class="btn" style="padding: 8px 16px; font-size: 12px;"
+                            onclick="setQuery('사망 위험 높은 환자')">
+                            사망 위험 높은 환자
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Protocol RAG Tab -->
+        <div id="protocol-rag" class="tab-content">
+            <h2 style="margin-bottom: 20px;">프로토콜 RAG (Protocol Retrieval)</h2>
+            <p style="margin-bottom: 20px; color: #6c757d;">의료 가이드라인 기반 프로토콜 검색 및 생성</p>
+
+            <div class="form-group">
+                <label>질의 (Query)</label>
+                <input type="text" id="protocol-input" placeholder="예: 패혈증 초기 수액 소생술" value="패혈증 초기 수액 소생술">
+                <div class="hint">가이드라인에서 검색할 질의를 입력하세요</div>
+            </div>
+
+            <button class="btn" onclick="testProtocol()">Search Protocol</button>
+
+            <div id="protocol-result"></div>
+        </div>
+    </div>
+
+    <script>
+        function showTab(tabId) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Show selected tab
+            document.getElementById(tabId).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function setQuery(query) {
+            document.getElementById('qa-input').value = query;
+        }
+
+        async function testClinicalSummary() {
+            const input = document.getElementById('clinical-input').value;
+            const resultDiv = document.getElementById('clinical-result');
+
+            try {
+                const data = JSON.parse(input);
+
+                resultDiv.innerHTML = '<div class="result-box"><h3>Generating... <span class="loading"></span></h3></div>';
+
+                const response = await fetch('/api/clinical-summary', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                resultDiv.innerHTML = `
+                    <div class="result-box ${response.ok ? 'success' : 'error'}">
+                        <h3>Response (${response.status})</h3>
+                        <pre>${JSON.stringify(result, null, 2)}</pre>
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="result-box error">
+                        <h3>Error</h3>
+                        <pre>${error.message}</pre>
+                    </div>
+                `;
+            }
+        }
+
+        async function testGentleReport() {
+            const input = document.getElementById('gentle-input').value;
+            const approvedBy = document.getElementById('approved-by').value;
+            const resultDiv = document.getElementById('gentle-result');
+
+            try {
+                const clinicalSummary = JSON.parse(input);
+
+                resultDiv.innerHTML = '<div class="result-box"><h3>Generating... <span class="loading"></span></h3></div>';
+
+                const response = await fetch('/api/gentle-report', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        patient_id: clinicalSummary.patient_id,
+                        approved_by: approvedBy,
+                        clinical_summary: clinicalSummary
+                    })
+                });
+
+                const result = await response.json();
+
+                resultDiv.innerHTML = `
+                    <div class="result-box ${response.ok ? 'success' : 'error'}">
+                        <h3>Response (${response.status})</h3>
+                        <pre>${JSON.stringify(result, null, 2)}</pre>
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="result-box error">
+                        <h3>Error</h3>
+                        <pre>${error.message}</pre>
+                    </div>
+                `;
+            }
+        }
+
+        async function testQA() {
+            const query = document.getElementById('qa-input').value;
+            const resultDiv = document.getElementById('qa-result');
+
+            try {
+                resultDiv.innerHTML = '<div class="result-box"><h3>Parsing... <span class="loading"></span></h3></div>';
+
+                const response = await fetch('/api/query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: query })
+                });
+
+                const result = await response.json();
+
+                resultDiv.innerHTML = `
+                    <div class="result-box ${response.ok ? 'success' : 'error'}">
+                        <h3>Response (${response.status})</h3>
+                        <pre>${JSON.stringify(result, null, 2)}</pre>
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="result-box error">
+                        <h3>Error</h3>
+                        <pre>${error.message}</pre>
+                    </div>
+                `;
+            }
+        }
+
+        async function testProtocol() {
+            const query = document.getElementById('protocol-input').value;
+            const resultDiv = document.getElementById('protocol-result');
+
+            try {
+                resultDiv.innerHTML = '<div class="result-box"><h3>Searching... <span class="loading"></span></h3></div>';
+
+                const response = await fetch('/protocol', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: query })
+                });
+
+                const result = await response.json();
+
+                resultDiv.innerHTML = `
+                    <div class="result-box ${response.ok ? 'success' : 'error'}">
+                        <h3>Response (${response.status})</h3>
+                        <pre>${JSON.stringify(result, null, 2)}</pre>
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="result-box error">
+                        <h3>Error</h3>
+                        <pre>${error.message}</pre>
+                    </div>
+                `;
+            }
+        }
+
+        // NEW: Protocol Evaluation Functions
+        function loadProtocolSampleData() {
+            const sampleData = {
+                'pe-patient_id': 'demo_001',
+                'pe-map': 58,
+                'pe-sbp': 82,
+                'pe-lactate': 4.2,
+                'pe-spo2': 89,
+                'pe-fio2': 0.5,
+                'pe-rr': 32,
+                'pe-urine': 0.3,
+                'pe-oxygen': 'true',
+                'pe-hfnc': 'false',
+                'pe-vent': 'false',
+                'pe-pressor': 'false'
+            };
+
+            for (const [key, value] of Object.entries(sampleData)) {
+                const element = document.getElementById(key);
+                if (element) {
+                    element.value = value;
+                }
+            }
+        }
+
+        async function evaluateProtocols() {
+            const patientData = {
+                patient_id: document.getElementById('pe-patient_id').value,
+                map: parseFloat(document.getElementById('pe-map').value) || undefined,
+                sbp: parseFloat(document.getElementById('pe-sbp').value) || undefined,
+                lactate: parseFloat(document.getElementById('pe-lactate').value) || undefined,
+                spo2: parseFloat(document.getElementById('pe-spo2').value) || undefined,
+                fio2: parseFloat(document.getElementById('pe-fio2').value) || undefined,
+                rr: parseFloat(document.getElementById('pe-rr').value) || undefined,
+                urine_output_ml_per_kg_hr: parseFloat(document.getElementById('pe-urine').value) || undefined,
+                on_oxygen: document.getElementById('pe-oxygen').value === 'true',
+                on_hfnc: document.getElementById('pe-hfnc').value === 'true',
+                on_vent: document.getElementById('pe-vent').value === 'true',
+                on_pressor: document.getElementById('pe-pressor').value === 'true'
+            };
+
+            // Remove undefined values
+            Object.keys(patientData).forEach(key => {
+                if (patientData[key] === undefined) {
+                    delete patientData[key];
+                }
+            });
+
+            const resultDiv = document.getElementById('protocol-eval-result');
+
+            try {
+                resultDiv.innerHTML = '<div class="result-box"><h3>Evaluating... <span class="loading"></span></h3></div>';
+
+                const response = await fetch('/api/evaluate-protocols', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(patientData)
+                });
+
+                const result = await response.json();
+
+                if (!result.actions || result.actions.length === 0) {
+                    resultDiv.innerHTML = `
+                        <div class="result-box">
+                            <h3>평가 완료</h3>
+                            <p style="margin-top: 10px; color: #666;">활성화된 프로토콜이 없습니다. 환자 상태가 안정적입니다.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Group actions by protocol
+                const groupedActions = {};
+                result.actions.forEach(action => {
+                    if (!groupedActions[action.protocol]) {
+                        groupedActions[action.protocol] = [];
+                    }
+                    groupedActions[action.protocol].push(action);
+                });
+
+                const protocolInfo = {
+                    sepsis: { title: '💉 패혈증 프로토콜', color: '#f5576c' },
+                    vent: { title: '🫁 호흡 관리 프로토콜', color: '#4facfe' },
+                    pressor: { title: '💊 승압제 프로토콜', color: '#43e97b' }
+                };
+
+                let html = '<div class="result-box success"><h3>프로토콜 평가 완료</h3>';
+                html += `<p style="margin: 10px 0; color: #666;">활성 프로토콜: ${result.active_protocols.join(', ')}</p>`;
+
+                for (const [protocol, actions] of Object.entries(groupedActions)) {
+                    const info = protocolInfo[protocol] || { title: protocol, color: '#667eea' };
+                    html += `<div style="margin-top: 20px; padding: 15px; background: white; border-radius: 8px; border-left: 4px solid ${info.color};">`;
+                    html += `<h4 style="margin-bottom: 15px; color: #333;">${info.title}</h4>`;
+
+                    actions.forEach(action => {
+                        const priorityColor = {
+                            'STAT': '#c00',
+                            'HIGH': '#ff8c00',
+                            'MEDIUM': '#ffd700'
+                        }[action.priority] || '#999';
+
+                        html += `
+                            <div style="margin-bottom: 12px; padding: 12px; background: #f8f9fa; border-radius: 6px; border-left: 3px solid ${priorityColor};">
+                                <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                                    <span style="background: ${priorityColor}; color: white; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: 10px;">
+                                        ${action.priority}
+                                    </span>
+                                    <span style="flex: 1; font-size: 14px; color: #333;">${action.action}</span>
+                                </div>
+                                ${action.evidence ? `
+                                    <div style="font-size: 12px; color: #667eea; margin-top: 5px;">
+                                        📚 ${action.evidence.source} (p.${action.evidence.page})
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `;
+                    });
+
+                    html += '</div>';
+                }
+
+                html += '</div>';
+                resultDiv.innerHTML = html;
+
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="result-box error">
+                        <h3>Error</h3>
+                        <pre>${error.message}</pre>
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+
+</html>

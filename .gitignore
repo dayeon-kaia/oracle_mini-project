@@ -23,15 +23,31 @@ node_modules/
 .idea/
 .DS_Store
 
-.gitkeep
-20251231.ipynb 
-20260102.ipynb 
-data.ipynb 
-mimic_total.duckdb 
-
-# 임시
-data-pipeline/scripts
-
 # Airflow
 airflow/logs/*
 !airflow/logs/.gitkeep
+
+# data
+data.ipynb 
+mimic_total.*
+data-pipeline/data/duckdb/
+data-pipeline/data/processed/*.csv
+data-pipeline/data/processed/all_features
+data-pipeline/data/raw/hosp/
+
+# model
+*.pkl
+
+check_dim.py 
+whichgmini.py
+drive_utils.py
+googledrive.ipynb   
+
+
+#vectorDB
+db_medical/
+estimate.py
+guidelines/
+ingest_bge_m3_supabase.py
+
+*.xlsx
