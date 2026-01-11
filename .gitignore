@@ -31,8 +31,9 @@ airflow/logs/*
 data.ipynb 
 mimic_total.*
 data-pipeline/data/duckdb/
-data-pipeline/models/
 data-pipeline/data/processed/*.csv
+data-pipeline/data/processed/all_features
 data-pipeline/data/raw/hosp/
 
+# model
 *.pkl
