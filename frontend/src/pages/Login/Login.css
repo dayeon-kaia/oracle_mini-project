@@ -3,17 +3,19 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 100%);
+  background-color: var(--background);
+  transition: background-color 0.3s ease;
 }
 
 .login-card {
-  background: linear-gradient(145deg, #1a1a2e 0%, #16162a 100%);
+  background: var(--card);
   padding: 48px;
   border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
   width: 100%;
   max-width: 420px;
+  transition: background 0.3s ease, border-color 0.3s ease;
 }
 
 .login-title {
@@ -21,7 +23,7 @@
   font-size: 24px;
   font-weight: 700;
   text-align: center;
-  color: #ffffff;
+  color: var(--foreground);
 }
 
 .login-subtitle {
@@ -40,12 +42,12 @@
 .login-input {
   padding: 14px 16px;
   font-size: 15px;
-  background-color: #0a0a0f;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: var(--input);
+  border: 1px solid var(--border);
   border-radius: 8px;
-  color: #ffffff;
+  color: var(--foreground);
   outline: none;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, background-color 0.3s ease;
 }
 
 .login-input::placeholder {

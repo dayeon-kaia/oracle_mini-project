@@ -1,0 +1,20 @@
+.themeToggle {
+    min-width: 40px !important;
+    padding: 0.5rem !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.themeToggle svg {
+    transition: transform 0.3s ease;
+}
+
+.themeToggle:hover svg {
+    transform: rotate(15deg) scale(1.1);
+}
+
+.themeToggle:active svg {
+    transform: rotate(15deg) scale(0.95);
+}

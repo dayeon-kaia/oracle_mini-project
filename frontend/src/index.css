@@ -1,3 +1,201 @@
+:root {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* Light mode colors from icu-monitoring-dashboard-nlp-lightmode (oklch) */
+  --background-light: oklch(0.985 0 0);
+  --foreground-light: oklch(0.145 0 0);
+  --card-light: oklch(1 0 0);
+  --card-foreground-light: oklch(0.145 0 0);
+  --popover-light: oklch(1 0 0);
+  --popover-foreground-light: oklch(0.145 0 0);
+  --primary-light: oklch(0.205 0 0);
+  --primary-foreground-light: oklch(0.985 0 0);
+  --secondary-light: oklch(0.97 0 0);
+  --secondary-foreground-light: oklch(0.205 0 0);
+  --muted-light: oklch(0.97 0 0);
+  --muted-foreground-light: oklch(0.556 0 0);
+  --accent-light: oklch(0.97 0 0);
+  --accent-foreground-light: oklch(0.205 0 0);
+  --destructive-light: oklch(0.577 0.245 27.325);
+  --destructive-foreground-light: oklch(0.577 0.245 27.325);
+  --border-light: oklch(0.922 0 0);
+  --input-light: oklch(0.922 0 0);
+  --ring-light: oklch(0.708 0 0);
+
+  /* Dark mode colors from icu-monitoring-dashboard-nlp-lightmode (oklch) */
+  --background-dark: oklch(0.11 0.012 240);
+  --foreground-dark: oklch(0.97 0.008 200);
+  --card-dark: oklch(0.16 0.018 240);
+  --card-foreground-dark: oklch(0.97 0.008 200);
+  --popover-dark: oklch(0.14 0.015 240);
+  --popover-foreground-dark: oklch(0.97 0.008 200);
+  --primary-dark: oklch(0.72 0.22 200);
+  --primary-foreground-dark: oklch(0.1 0.012 240);
+  --secondary-dark: oklch(0.22 0.025 240);
+  --secondary-foreground-dark: oklch(0.97 0.008 200);
+  --muted-dark: oklch(0.24 0.025 240);
+  --muted-foreground-dark: oklch(0.65 0.018 200);
+  --accent-dark: oklch(0.26 0.03 240);
+  --accent-foreground-dark: oklch(0.97 0.008 200);
+  --destructive-dark: oklch(0.62 0.27 20);
+  --destructive-foreground-dark: oklch(0.98 0 0);
+  --border-dark: oklch(0.3 0.03 240);
+  --input-dark: oklch(0.2 0.025 240);
+  --ring-dark: oklch(0.72 0.22 200);
+
+  /* Chart colors */
+  --chart-1-light: oklch(0.646 0.222 41.116);
+  --chart-2-light: oklch(0.6 0.118 184.704);
+  --chart-3-light: oklch(0.398 0.07 227.392);
+  --chart-4-light: oklch(0.828 0.189 84.429);
+  --chart-5-light: oklch(0.769 0.188 70.08);
+
+  --chart-1-dark: oklch(0.68 0.26 220);
+  --chart-2-dark: oklch(0.7 0.24 150);
+  --chart-3-dark: oklch(0.66 0.27 280);
+  --chart-4-dark: oklch(0.78 0.22 85);
+  --chart-5-dark: oklch(0.68 0.26 30);
+
+  /* Neon colors (dark mode only) */
+  --neon-blue: oklch(0.68 0.26 220);
+  --neon-cyan: oklch(0.72 0.22 200);
+  --neon-purple: oklch(0.66 0.27 280);
+  --neon-red: oklch(0.62 0.27 20);
+  --neon-yellow: oklch(0.78 0.22 85);
+  --neon-orange: oklch(0.68 0.26 30);
+  --neon-green: oklch(0.7 0.24 150);
+
+  /* Dashboard-specific variables - Light mode */
+  --bg-primary-light: oklch(0.985 0 0);
+  --text-primary-light: oklch(0.145 0 0);
+  --text-secondary-light: oklch(0.556 0 0);
+  --text-tertiary-light: oklch(0.556 0 0);
+  --glass-bg-light: rgba(255, 255, 255, 0.75);
+  --glass-hover-light: rgba(255, 255, 255, 0.9);
+  --glass-border-light: rgba(0, 0, 0, 0.12);
+
+  /* Dashboard-specific variables - Dark mode */
+  --bg-primary-dark: oklch(0.11 0.012 240);
+  --text-primary-dark: oklch(0.97 0.008 200);
+  --text-secondary-dark: oklch(0.65 0.018 200);
+  --text-tertiary-dark: oklch(0.65 0.018 200);
+  --glass-bg-dark: rgba(255, 255, 255, 0.06);
+  --glass-hover-dark: rgba(255, 255, 255, 0.1);
+  --glass-border-dark: rgba(255, 255, 255, 0.12);
+
+  /* Common variables */
+  --glass-blur: blur(10px);
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+
+  /* Default to dark mode variables */
+  --background: var(--background-dark);
+  --foreground: var(--foreground-dark);
+  --card: var(--card-dark);
+  --card-foreground: var(--card-foreground-dark);
+  --popover: var(--popover-dark);
+  --popover-foreground: var(--popover-foreground-dark);
+  --primary: var(--primary-dark);
+  --primary-foreground: var(--primary-foreground-dark);
+  --secondary: var(--secondary-dark);
+  --secondary-foreground: var(--secondary-foreground-dark);
+  --muted: var(--muted-dark);
+  --muted-foreground: var(--muted-foreground-dark);
+  --accent: var(--accent-dark);
+  --accent-foreground: var(--accent-foreground-dark);
+  --destructive: var(--destructive-dark);
+  --destructive-foreground: var(--destructive-foreground-dark);
+  --border: var(--border-dark);
+  --input: var(--input-dark);
+  --ring: var(--ring-dark);
+
+  /* Dashboard defaults (dark) */
+  --bg-primary: var(--bg-primary-dark);
+  --text-primary: var(--text-primary-dark);
+  --text-secondary: var(--text-secondary-dark);
+  --text-tertiary: var(--text-tertiary-dark);
+  --glass-bg: var(--glass-bg-dark);
+  --glass-hover: var(--glass-hover-dark);
+  --glass-border: var(--glass-border-dark);
+
+  color-scheme: dark;
+  color: var(--foreground);
+  background-color: var(--background);
+}
+
+/* Light mode: override variables when .dark class is NOT present */
+html:not(.dark) {
+  --background: var(--background-light);
+  --foreground: var(--foreground-light);
+  --card: var(--card-light);
+  --card-foreground: var(--card-foreground-light);
+  --popover: var(--popover-light);
+  --popover-foreground: var(--popover-foreground-light);
+  --primary: var(--primary-light);
+  --primary-foreground: var(--primary-foreground-light);
+  --secondary: var(--secondary-light);
+  --secondary-foreground: var(--secondary-foreground-light);
+  --muted: var(--muted-light);
+  --muted-foreground: var(--muted-foreground-light);
+  --accent: var(--accent-light);
+  --accent-foreground: var(--accent-foreground-light);
+  --destructive: var(--destructive-light);
+  --destructive-foreground: var(--destructive-foreground-light);
+  --border: var(--border-light);
+  --input: var(--input-light);
+  --ring: var(--ring-light);
+
+  /* Dashboard overrides for light mode */
+  --bg-primary: var(--bg-primary-light);
+  --text-primary: var(--text-primary-light);
+  --text-secondary: var(--text-secondary-light);
+  --text-tertiary: var(--text-tertiary-light);
+  --glass-bg: var(--glass-bg-light);
+  --glass-hover: var(--glass-hover-light);
+  --glass-border: var(--glass-border-light);
+
+  color-scheme: light;
+}
+
+/* Dark mode: keep dark variables (default) */
+html.dark {
+  --background: var(--background-dark);
+  --foreground: var(--foreground-dark);
+  --card: var(--card-dark);
+  --card-foreground: var(--card-foreground-dark);
+  --popover: var(--popover-dark);
+  --popover-foreground: var(--popover-foreground-dark);
+  --primary: var(--primary-dark);
+  --primary-foreground: var(--primary-foreground-dark);
+  --secondary: var(--secondary-dark);
+  --secondary-foreground: var(--secondary-foreground-dark);
+  --muted: var(--muted-dark);
+  --muted-foreground: var(--muted-foreground-dark);
+  --accent: var(--accent-dark);
+  --accent-foreground: var(--accent-foreground-dark);
+  --destructive: var(--destructive-dark);
+  --destructive-foreground: var(--destructive-foreground-dark);
+  --border: var(--border-dark);
+  --input: var(--input-dark);
+  --ring: var(--ring-dark);
+
+  color-scheme: dark;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -5,9 +203,15 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  background-color: #f0f2f5;
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background-color: var(--background);
+  color: var(--foreground);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
 }

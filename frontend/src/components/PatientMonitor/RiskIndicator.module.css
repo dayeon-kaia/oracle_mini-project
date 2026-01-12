@@ -1,0 +1,47 @@
+.indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.svg {
+    display: block;
+}
+
+.progress {
+    transition: stroke-dashoffset 0.5s ease, stroke 0.3s ease;
+}
+
+.progress.critical {
+    stroke: var(--neon-red);
+    filter: drop-shadow(0 0 4px var(--neon-red));
+}
+
+.progress.warning {
+    stroke: var(--neon-amber);
+    filter: drop-shadow(0 0 4px var(--neon-amber));
+}
+
+.progress.stable {
+    stroke: var(--neon-cyan);
+    filter: drop-shadow(0 0 4px var(--neon-cyan));
+}
+
+.text {
+    fill: var(--text-primary);
+    font-family: var(--font-mono);
+}
+
+.label {
+    font-size: 0.625rem;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 500;
+}
+
+/* Size Variants */
+.indicator.large .label {
+    font-size: 0.75rem;
+}
