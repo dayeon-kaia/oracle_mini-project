@@ -1,23 +1,38 @@
+"""
+EDCC RAG + ML Service (통합 버전)
+- RAG/LLM: 프로토콜 검색, 임상 요약, Gentle Report, Q&A
+- ML: XGBoost 기반 환자 악화 예측 + SHAP 설명
+"""
+
 import json
 import os
+import re
 from datetime import datetime
 
 from dotenv import load_dotenv
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from openai import OpenAI
 
+# RAG/LLM 모듈
 from rule_engine import create_engine
 from clinical_summary import create_clinical_summary_generator
 from gentle_report import create_gentle_report_generator
 from qa_interface import create_qa_interface
 from context_classifier import classify_clinical_context
 from nlq_agent import query_csv_agent
-import re
+
+# ML 모듈
+from src.predictor import Predictor
+from src.shap_explainer import ShapExplainer
 
 load_dotenv()
+
+# ============================================================
+# Configuration
+# ============================================================
 
 PERSIST_DIR = os.getenv("PERSIST_DIR", "./db_medical_md")
 COLLECTION_NAME = os.getenv("COLLECTION_NAME", "medical_md")
@@ -26,15 +41,21 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
+CORS(app)
 
+# ============================================================
+# Initialize Services
+# ============================================================
 
+print("\n=== EDCC Service 초기화 ===")
+
+# OpenAI Client
 OPENAI_CLIENT = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
 
-# Initialize rule engine
+# Rule Engine
 RULE_ENGINE = create_engine(protocols_dir="./protocols")
 
-# Initialize LLM modules
+# LLM Modules
 try:
     CLINICAL_SUMMARY_GENERATOR = create_clinical_summary_generator()
     GENTLE_REPORT_GENERATOR = create_gentle_report_generator()
@@ -46,7 +67,38 @@ except Exception as e:
     GENTLE_REPORT_GENERATOR = None
     QA_INTERFACE = None
 
+# VectorStore
+def _load_vectorstore() -> Chroma:
+    embeddings = HuggingFaceEmbeddings(
+        model_name=HF_MODEL,
+        model_kwargs={"device": "cpu"},
+        encode_kwargs={"normalize_embeddings": True},
+    )
+    return Chroma(
+        persist_directory=PERSIST_DIR,
+        collection_name=COLLECTION_NAME,
+        embedding_function=embeddings,
+    )
 
+VECTORSTORE = _load_vectorstore()
+print("✅ VectorStore loaded")
+
+# ML Predictor + SHAP
+try:
+    predictor = Predictor(model_dir='models', version='v1')
+    shap_explainer = ShapExplainer(predictor)
+    print(f"✅ ML models loaded: {list(predictor.models.keys())}")
+except Exception as e:
+    print(f"⚠️  ML models initialization failed: {e}")
+    predictor = None
+    shap_explainer = None
+
+print("=== 초기화 완료 ===\n")
+
+
+# ============================================================
+# RAG Helper Functions
+# ============================================================
 
 def classify_intent(q: str) -> str:
     ql = q.lower()
@@ -167,45 +219,22 @@ def build_protocol_with_llm(query: str, intent: str, evidence: list):
     return json.loads(resp.choices[0].message.content)
 
 
-def _load_vectorstore() -> Chroma:
-    embeddings = HuggingFaceEmbeddings(
-        model_name=HF_MODEL,
-        model_kwargs={"device": "cpu"},
-        encode_kwargs={"normalize_embeddings": True},
-    )
-    return Chroma(
-        persist_directory=PERSIST_DIR,
-        collection_name=COLLECTION_NAME,
-        embedding_function=embeddings,
-    )
-
-
-VECTORSTORE = _load_vectorstore()
-
-
 def retrieve_evidence(vectorstore: Chroma, query: str, topic: str, k: int = 8, context: dict = None):
-    """Context-aware evidence retrieval with card_role filtering
-    
-    Note: ChromaDB metadata fields are JSON strings, so we filter in post-processing
-    """
+    """Context-aware evidence retrieval with card_role filtering"""
     
     where = None
     
-    # Only filter by card_role based on urgency (exact string match works)
     if context:
         urgency = context.get("urgency", "ROUTINE")
-        
         if urgency == "STAT":
-            # STAT: ACTION과 TRIGGER만
-            where = {"card_role": "ACTION"}  # Will get both ACTION and TRIGGER in post-filter
+            where = {"card_role": "ACTION"}
         elif urgency != "ROUTINE":
-            # URGENT: Use no filter, post-process to exclude ADVERSE_EFFECT
             where = None
     
     query_embedding = vectorstore._embedding_function.embed_query(query)
     res = vectorstore._collection.query(
         query_embeddings=[query_embedding],
-        n_results=k * 3,  # Fetch more to allow for filtering
+        n_results=k * 3,
         where=where,
         include=["documents", "metadatas", "distances"],
     )
@@ -215,7 +244,6 @@ def retrieve_evidence(vectorstore: Chroma, query: str, topic: str, k: int = 8, c
     ids = res["ids"][0] if res.get("ids") and res["ids"] else []
     dists = res["distances"][0] if res.get("distances") and res["distances"] else []
 
-    # Post-process: filter and sort
     ROLE_PRIORITY = {
         "ACTION": 1,
         "TRIGGER": 2,
@@ -229,12 +257,10 @@ def retrieve_evidence(vectorstore: Chroma, query: str, topic: str, k: int = 8, c
     for _id, doc, meta, dist in zip(ids, docs, metas, dists):
         role = meta.get("card_role", "RATIONALE")
         
-        # Filter based on urgency
         if context:
             urgency = context.get("urgency", "ROUTINE")
             bundles = context.get("bundles", [])
             
-            # Urgency-based filtering
             if urgency == "STAT" and role not in ["ACTION", "TRIGGER"]:
                 continue
             if urgency == "URGENT" and role in ["ADVERSE_EFFECT", "ETHICS"]:
@@ -242,7 +268,6 @@ def retrieve_evidence(vectorstore: Chroma, query: str, topic: str, k: int = 8, c
             if urgency == "ROUTINE" and role == "ADVERSE_EFFECT":
                 continue
             
-            # Bundle filtering (metadata stored as JSON string)
             if bundles:
                 chunk_bundles_str = meta.get("bundle", "[]")
                 try:
@@ -260,10 +285,7 @@ def retrieve_evidence(vectorstore: Chroma, query: str, topic: str, k: int = 8, c
             "priority": ROLE_PRIORITY.get(role, 99)
         })
     
-    # Sort: priority first, then score
     evidence.sort(key=lambda x: (x["priority"], -x["score"]))
-    
-    # Return top k
     return evidence[:k]
 
 
@@ -287,7 +309,6 @@ def dedup_evidence(evidence):
     seen = set()
     out = []
     for e in sorted(evidence, key=lambda x: (x.get("priority", 99), -x["score"])):
-        # Use evidence_id for deduplication (card_id is unique)
         key = e["evidence_id"]
         if key in seen:
             continue
@@ -305,75 +326,57 @@ def sanitize_protocol_evidence_ids(protocol: dict, allowed_ids: set):
 
 
 def package_evidence_for_ui(evidence: list, used_ids: set):
+    import difflib
     out = []
     for e in evidence:
-        # Return all evidence, not just LLM-used ones (top 3)
         if len(out) >= 3:
             break
         meta = e["meta"]
         content = e["content"] or ""
         snippet = content[:400] + "…" if len(content) > 400 else content
         
-        # Parse citations from metadata (stored as JSON string)
         citations_raw = meta.get("citations", "[]")
         try:
             citations = json.loads(citations_raw) if isinstance(citations_raw, str) else citations_raw
             if not citations:
                 citation_text = meta.get("card_id", "Clinical Guidelines")
             else:
-                # Clean up citations
                 clean_citations = set()
                 for cit in citations:
-                    # Remove brackets
                     cit = cit.strip("[]")
-                    # Split by comma (some citations are "Source A, Source B")
                     parts = [p.strip() for p in cit.split(",")]
-                    
                     for p in parts:
-                        # Remove trailing numbers or weird suffixes (e.g. "Source 1")
-                        # But be careful not to remove years like 2024
-                        p = re.sub(r'^\d+$', '', p) # standalone numbers
-                        p = re.sub(r'(?:소스|source)\s*\d+', '', p, flags=re.IGNORECASE) # "source 46"
-                        p = re.sub(r'\d+쪽', '', p) # "46쪽"
-                        
-                        if len(p) < 2: # Skip single chars or empty
+                        p = re.sub(r'^\d+$', '', p)
+                        p = re.sub(r'(?:소스|source)\s*\d+', '', p, flags=re.IGNORECASE)
+                        p = re.sub(r'\d+쪽', '', p)
+                        if len(p) < 2:
                             continue
-                            
                         clean_citations.add(p)
                 
-                # Fuzzy deduplication
-                import difflib
                 final_citations = []
-                sorted_citations = sorted(list(clean_citations), key=len, reverse=True) # Longest first
-                
+                sorted_citations = sorted(list(clean_citations), key=len, reverse=True)
                 for cit in sorted_citations:
                     is_duplicate = False
                     for existing in final_citations:
-                        # If heavily overlaps or is substring
                         if cit in existing or existing in cit:
                             is_duplicate = True
                             break
-                        # Check similarity
                         ratio = difflib.SequenceMatcher(None, cit, existing).ratio()
-                        if ratio > 0.8: # high similarity
+                        if ratio > 0.8:
                             is_duplicate = True
                             break
-                    
                     if not is_duplicate:
                         final_citations.append(cit)
-                
                 citation_text = ", ".join(sorted(final_citations))
         except:
             citation_text = meta.get("card_id", "Clinical Guidelines")
         
-        out.append(
-            {
-                "id": e["evidence_id"],
-                "doc_title": meta.get("card_title") or citation_text,
-                "page": meta.get("page"),
-                "snippet": snippet,
-            }
-        )
+        out.append({
+            "id": e["evidence_id"],
+            "doc_title": meta.get("card_title") or citation_text,
+            "page": meta.get("page"),
+            "snippet": snippet,
+        })
     return out
 
 
@@ -382,19 +385,44 @@ def normalize_protocol_for_ui(protocol: dict):
         return {"title": "", "steps": [], "disclaimer": ""}
     steps = []
     for step in protocol.get("steps", []):
-        steps.append(
-            {
-                "order": step.get("order"),
-                "title": step.get("label", ""),
-                "actions": step.get("actions", []),
-            }
-        )
+        steps.append({
+            "order": step.get("order"),
+            "title": step.get("label", ""),
+            "actions": step.get("actions", []),
+        })
     return {
         "title": protocol.get("title", ""),
         "steps": steps,
         "disclaimer": protocol.get("disclaimer", ""),
     }
 
+
+# ============================================================
+# Routes: Index / Health
+# ============================================================
+
+@app.route("/", methods=["GET"])
+def index():
+    """API Service Information"""
+    return jsonify({
+        "service": "EDCC RAG + ML Service",
+        "version": "1.0.0",
+        "status": "running",
+        "vectordb_loaded": VECTORSTORE is not None,
+        "ml_models_loaded": predictor is not None,
+        "endpoints": {
+            "rag": ["/search", "/protocol"],
+            "llm": ["/api/clinical-summary", "/api/gentle-report", "/api/query"],
+            "rules": ["/api/evaluate-protocols"],
+            "ml": ["/ml/health", "/ml/predict", "/ml/predict/batch", "/ml/features"]
+        },
+        "docs": "See README.md for API documentation"
+    })
+
+
+# ============================================================
+# Routes: RAG Endpoints
+# ============================================================
 
 @app.post("/search")
 def search():
@@ -411,15 +439,13 @@ def search():
         meta = e["meta"]
         src = meta.get("source", "unknown_source")
         page = meta.get("page", meta.get("page_number", "unknown_page"))
-        results.append(
-            {
-                "evidence_id": e["evidence_id"],
-                "source": src,
-                "page": page,
-                "score": e["score"],
-                "content": e["content"],
-            }
-        )
+        results.append({
+            "evidence_id": e["evidence_id"],
+            "source": src,
+            "page": page,
+            "score": e["score"],
+            "content": e["content"],
+        })
 
     return jsonify({"intent": intent, "results": results})
 
@@ -428,17 +454,11 @@ def search():
 def protocol():
     payload = request.get_json(force=True)
     query = (payload.get("query") or "").strip()
-    
-    # NEW: Accept patient vitals for clinical context classification
     patient_vitals = payload.get("vitals", {})
     
-    # Step 1: Classify clinical context from vitals
     context = classify_clinical_context(patient_vitals) if patient_vitals else {"urgency": "ROUTINE", "bundles": []}
-    
-    # Step 2: Context-aware evidence retrieval
     intent = classify_intent(query) if query else "general"
     
-    # Pass context to retrieve_evidence
     if intent == "sepsis":
         evidence_all = []
         for step, qs in SEPSIS_STEP_QUERIES.items():
@@ -459,8 +479,8 @@ def protocol():
 
     response = {
         "intent": llm_out.get("intent", intent),
-        "urgency": context.get("urgency"),  # NEW
-        "bundles": context.get("bundles"),   # NEW
+        "urgency": context.get("urgency"),
+        "bundles": context.get("bundles"),
         "protocol": normalize_protocol_for_ui(llm_out.get("protocol", {})),
         "evidence": evidence_ui,
     }
@@ -469,50 +489,12 @@ def protocol():
 
 @app.post("/api/evaluate-protocols")
 def evaluate_protocols():
-    """
-    Evaluate rule-based protocols against patient features
-    
-    Input JSON:
-    {
-      "patient_id": "demo_001",  # optional
-      "map": 58,
-      "sbp": 82,
-      "lactate": 4.2,
-      "spo2": 89,
-      "fio2": 0.5,
-      "rr": 32,
-      "on_oxygen": true,
-      "on_hfnc": false,
-      "on_vent": false,
-      "on_pressor": false,
-      "urine_output_ml_per_kg_hr": 0.3
-    }
-    
-    Output JSON:
-    {
-      "patient_id": "demo_001",
-      "active_protocols": ["sepsis", "pressor", "vent"],
-      "actions": [
-        {
-          "protocol": "sepsis",
-          "priority": "STAT",
-          "action": "Crystalloid 30 mL/kg, 3시간 내 투여 고려",
-          "evidence": {
-            "source": "KCDC + KSCCM 2024",
-            "page": 45
-          }
-        },
-        ...
-      ]
-    }
-    """
+    """Evaluate rule-based protocols against patient features"""
     payload = request.get_json(force=True)
     
-    # Validate required fields
     if not payload:
         return jsonify({"error": "Patient features are required"}), 400
     
-    # Evaluate protocols using rule engine
     try:
         result = RULE_ENGINE.evaluate_all_protocols(payload)
         return jsonify(result)
@@ -520,76 +502,18 @@ def evaluate_protocols():
         return jsonify({"error": f"Protocol evaluation failed: {str(e)}"}), 500
 
 
-
-
-
-@app.route("/", methods=["GET"])
-def index():
-    """
-    API Service Information
-    """
-    return jsonify({
-        "service": "EDCC RAG ML Service",
-        "version": "1.0.0",
-        "status": "running",
-        "vectordb_loaded": VECTORSTORE is not None,
-        "endpoints": {
-            "rag": ["/search", "/protocol"],
-            "llm": ["/api/clinical-summary", "/api/gentle-report", "/api/query"],
-            "rules": ["/api/evaluate-protocols"]
-        },
-        "docs": "See README.md for API documentation"
-    })
-
-
-# UI routes removed - this is an API-only service
-# Frontend React app handles all UI
-
-
 # ============================================================
-# New LLM Feature Endpoints
+# Routes: LLM Feature Endpoints
 # ============================================================
-
 
 @app.post("/api/clinical-summary")
 def clinical_summary_endpoint():
-    """
-    Generate clinical summary for medical staff
-    
-    Input JSON:
-    {
-      "patient_id": "demo_001",
-      "vitals": {"map": 58, "sbp": 82, "hr": 120},
-      "labs": {"lactate": 4.2, "wbc": 18},
-      "shap_features": [
-        {"feature": "map_mean", "value": 58, "contribution": -0.35},
-        {"feature": "lactate_last", "value": 4.2, "contribution": 0.28}
-      ],
-      "prediction_risk": {"mortality": 0.75, "pressor": 0.85, "vent": 0.45},
-      "data_quality_flags": ["MAP 센서 간헐적 결측"]
-    }
-    
-    Output JSON:
-    {
-      "patient_id": "demo_001",
-      "risk_level": "high",
-      "risk_score": 0.85,
-      "summary": "...",
-      "key_features": [...],
-      "recommended_actions": [...],
-      "data_quality_alerts": [...],
-      "timestamp": "2026-01-02T11:46:00"
-    }
-    """
+    """Generate clinical summary for medical staff"""
     if not CLINICAL_SUMMARY_GENERATOR:
-        return (
-            jsonify({"error": "Clinical summary service is not available"}),
-            503,
-        )
+        return jsonify({"error": "Clinical summary service is not available"}), 503
 
     payload = request.get_json(force=True)
 
-    # Validate required fields
     required = ["patient_id", "vitals", "labs", "shap_features", "prediction_risk"]
     missing = [f for f in required if f not in payload]
     if missing:
@@ -604,10 +528,7 @@ def clinical_summary_endpoint():
             prediction_risk=payload["prediction_risk"],
             data_quality_flags=payload.get("data_quality_flags"),
         )
-
-        # Add server timestamp
         summary["timestamp"] = datetime.now().isoformat()
-
         return jsonify(summary)
     except Exception as e:
         return jsonify({"error": f"Clinical summary generation failed: {str(e)}"}), 500
@@ -615,44 +536,14 @@ def clinical_summary_endpoint():
 
 @app.post("/api/gentle-report")
 def gentle_report_endpoint():
-    """
-    Generate gentle report for patient family (requires medical staff approval)
-    
-    Input JSON:
-    {
-      "patient_id": "demo_001",
-      "approved_by": "Dr. Kim",  # Required!
-      "clinical_summary": {
-        "risk_level": "high",
-        "summary": "...",
-        "key_features": [...]
-      }
-    }
-    
-    Output JSON:
-    {
-      "patient_id": "demo_001",
-      "status": "불안정",
-      "simple_explanation": "...",
-      "what_to_expect": "...",
-      "family_guidance": "...",
-      "approved_by": "Dr. Kim",
-      "approved": true,
-      "timestamp": "2026-01-02T11:46:00"
-    }
-    """
+    """Generate gentle report for patient family"""
     if not GENTLE_REPORT_GENERATOR:
-        return (
-            jsonify({"error": "Gentle report service is not available"}),
-            503,
-        )
+        return jsonify({"error": "Gentle report service is not available"}), 503
 
     payload = request.get_json(force=True)
 
-    # Validate required fields
     if "patient_id" not in payload:
         return jsonify({"error": "Missing required field: patient_id"}), 400
-
     if "clinical_summary" not in payload:
         return jsonify({"error": "Missing required field: clinical_summary"}), 400
 
@@ -662,10 +553,7 @@ def gentle_report_endpoint():
             approved_by=payload.get("approved_by"),
             require_approval=True,
         )
-
-        # Add server timestamp
         report["timestamp"] = datetime.now().isoformat()
-
         return jsonify(report)
     except Exception as e:
         return jsonify({"error": f"Gentle report generation failed: {str(e)}"}), 500
@@ -673,31 +561,12 @@ def gentle_report_endpoint():
 
 @app.post("/api/query")
 def query_endpoint():
-    """
-    Parse natural language query and return filter parameters
-    
-    Input JSON:
-    {
-      "query": "최근 2시간 내 위험도 급상승한 환자 보여줘"
-    }
-    
-    Output JSON:
-    {
-      "filters": {"time_range": "2h", "risk_change": "급상승"},
-      "interpretation": "최근 2시간 동안 위험도가 급격히 상승한 환자를 조회합니다.",
-      "sort_by": "risk_change_rate",
-      "original_query": "..."
-    }
-    """
+    """Parse natural language query and return filter parameters"""
     if not QA_INTERFACE:
-        return (
-            jsonify({"error": "Q&A interface service is not available"}),
-            503,
-        )
+        return jsonify({"error": "Q&A interface service is not available"}), 503
 
     payload = request.get_json(force=True)
 
-    # Validate required field
     if "query" not in payload or not payload["query"].strip():
         return jsonify({"error": "Missing or empty query"}), 400
 
@@ -710,32 +579,24 @@ def query_endpoint():
 
 @app.post("/api/nlq")
 def nlq_endpoint():
-    """
-    Experimental NLQ endpoint using Pandas Dataframe Agent
-    Input: {"question": "who has high lactate?"}
-    """
+    """Experimental NLQ endpoint using Pandas Dataframe Agent"""
     payload = request.get_json(force=True)
     question = payload.get("question")
     if not question:
         return jsonify({"error": "question is required"}), 400
     
-    # Run agent
     try:
         response = query_csv_agent(question)
         if "error" in response:
-             return jsonify(response), 500
+            return jsonify(response), 500
         
-        # Format to match frontend expectation (approx)
-        # Frontend expects result columns/rows or at least a text answer
-        # The agent returns a string. We can wrap it.
         return jsonify({
             "request_id": f"req_{datetime.now().timestamp()}",
             "question": question,
-            "sql": response.get("sql", "SQL generation failed or hidden"), 
+            "sql": response.get("sql", "SQL generation failed or hidden"),
             "answer": response["answer"],
-            # Return actual data rows if available
             "columns": response.get("columns", []),
-            "rows": response.get("rows", []), 
+            "rows": response.get("rows", []),
             "row_count": len(response.get("rows", [])),
             "logs": [
                 {
@@ -750,5 +611,132 @@ def nlq_endpoint():
         return jsonify({"error": str(e)}), 500
 
 
+# ============================================================
+# Routes: ML Prediction Endpoints (네 코드)
+# ============================================================
+
+@app.route('/ml/health', methods=['GET'])
+def ml_health():
+    """ML 서비스 헬스 체크"""
+    if not predictor:
+        return jsonify({'status': 'unavailable', 'error': 'ML models not loaded'}), 503
+    
+    return jsonify({
+        'status': 'healthy',
+        'models_loaded': list(predictor.models.keys()),
+        'n_features': len(predictor.feature_cols)
+    })
+
+
+@app.route('/ml/predict', methods=['POST'])
+def ml_predict():
+    """
+    단일 환자 예측
+    
+    Request Body:
+    {
+        "patient_id": "P-1024",
+        "features": {
+            "hr": 92, "rr": 18, "spo2": 96, ...
+        }
+    }
+    
+    # TODO: REPLACE WITH REAL DATA
+    # 현재 features는 프론트엔드에서 전달받는 mock 데이터
+    # 실제 연동 시 EMR/실시간 모니터링 시스템에서 가져와야 함
+    """
+    if not predictor:
+        return jsonify({'error': 'ML models not loaded'}), 503
+    
+    try:
+        data = request.get_json()
+        
+        if not data or 'features' not in data:
+            return jsonify({'error': 'features 필드 필요'}), 400
+        
+        patient_id = data.get('patient_id', 'unknown')
+        features = data['features']  # TODO: REPLACE WITH REAL DATA - 실제 환자 피처로 교체
+        
+        # 예측
+        result = predictor.predict(features)
+        
+        # SHAP (composite 모델 기준)
+        shap_top5 = shap_explainer.get_top_features(features, 'composite', top_n=5)
+        
+        return jsonify({
+            'patient_id': patient_id,
+            'predictions': result['predictions'],
+            'risk_levels': result['risk_levels'],
+            'shap_top5': shap_top5
+        })
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/ml/predict/batch', methods=['POST'])
+def ml_predict_batch():
+    """
+    배치 예측
+    
+    Request Body:
+    {
+        "patients": [
+            {"patient_id": "P-1024", "features": {...}},
+            {"patient_id": "P-1025", "features": {...}}
+        ]
+    }
+    
+    # TODO: REPLACE WITH REAL DATA
+    # 현재 patients 리스트는 프론트엔드에서 전달받는 mock 데이터
+    # 실제 연동 시 DB 쿼리 또는 실시간 스트림에서 가져와야 함
+    """
+    if not predictor:
+        return jsonify({'error': 'ML models not loaded'}), 503
+    
+    try:
+        data = request.get_json()
+        
+        if not data or 'patients' not in data:
+            return jsonify({'error': 'patients 필드 필요'}), 400
+        
+        results = []
+        for patient in data['patients']:  # TODO: REPLACE WITH REAL DATA - 실제 환자 목록으로 교체
+            patient_id = patient.get('patient_id', 'unknown')
+            features = patient.get('features', {})
+            
+            result = predictor.predict(features)
+            shap_top5 = shap_explainer.get_top_features(features, 'composite', top_n=5)
+            
+            results.append({
+                'patient_id': patient_id,
+                'predictions': result['predictions'],
+                'risk_levels': result['risk_levels'],
+                'shap_top5': shap_top5
+            })
+        
+        return jsonify({'results': results})
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/ml/features', methods=['GET'])
+def ml_get_features():
+    """필요한 피처 목록 반환"""
+    if not predictor:
+        return jsonify({'error': 'ML models not loaded'}), 503
+    
+    return jsonify({
+        'feature_cols': predictor.feature_cols,
+        'n_features': len(predictor.feature_cols)
+    })
+
+
+# ============================================================
+# Main
+# ============================================================
+
 if __name__ == "__main__":
-    app.run(debug=True, port=5003)
+    port = int(os.environ.get('PORT', 5003))
+    app.run(host='0.0.0.0', port=port, debug=True)
