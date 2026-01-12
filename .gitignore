@@ -45,6 +45,9 @@ data-pipeline/data/raw/hosp/
 
 # model
 *.pkl
+# but keep pkl files in ml-service/models
+!/ml-service/models/
+!/ml-service/models/*.pkl
 
 check_dim.py 
 whichgmini.py
