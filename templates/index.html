@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Guideline Search</title>
+    <style>
+      :root {
+        --bg: #0f1220;
+        --panel: #171b2f;
+        --accent: #ffcc5c;
+        --text: #f2f4ff;
+        --muted: #a7b0d3;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "IBM Plex Sans", "Noto Sans KR", sans-serif;
+        background: radial-gradient(1200px 700px at 10% 10%, #1c2240, var(--bg));
+        color: var(--text);
+      }
+      .wrap {
+        max-width: 960px;
+        margin: 40px auto;
+        padding: 0 20px 60px;
+      }
+      h1 {
+        font-weight: 700;
+        letter-spacing: 0.4px;
+        margin: 0 0 16px;
+      }
+      p.sub {
+        margin: 0 0 28px;
+        color: var(--muted);
+      }
+      form {
+        display: flex;
+        gap: 12px;
+        background: var(--panel);
+        padding: 14px;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+      }
+      input[type="text"] {
+        flex: 1;
+        background: transparent;
+        border: 1px solid #2a3155;
+        color: var(--text);
+        padding: 12px 14px;
+        border-radius: 10px;
+        font-size: 16px;
+      }
+      button {
+        background: var(--accent);
+        border: none;
+        padding: 12px 18px;
+        border-radius: 10px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .results {
+        margin-top: 28px;
+        display: grid;
+        gap: 14px;
+      }
+      .card {
+        background: var(--panel);
+        padding: 16px;
+        border-radius: 12px;
+        border: 1px solid #2a3155;
+      }
+      .meta {
+        font-size: 13px;
+        color: var(--muted);
+        margin-bottom: 10px;
+      }
+      .snippet {
+        line-height: 1.5;
+      }
+      .empty {
+        color: var(--muted);
+        margin-top: 18px;
+      }
+      @media (max-width: 640px) {
+        form { flex-direction: column; }
+        button { width: 100%; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>Guideline Search</h1>
+      <p class="sub">질문을 입력하면 문서 검색 결과만 보여줍니다.</p>
+
+      <form method="post">
+        <input
+          type="text"
+          name="query"
+          placeholder="예: 패혈증 환자의 초기 수액 소생술 권고 사항"
+          value="{{ query }}"
+          required
+        />
+        <button type="submit">검색</button>
+      </form>
+
+      {% if query %}
+        <div class="empty">intent: {{ intent }}</div>
+      {% endif %}
+
+      {% if results %}
+        <div class="results">
+          {% for r in results %}
+            <div class="card">
+              <div class="meta">source: {{ r.source }} | page: {{ r.page }} | score: {{ r.score }}</div>
+              <div class="snippet">{{ r.snippet }}</div>
+            </div>
+          {% endfor %}
+        </div>
+      {% elif query %}
+        <div class="empty">검색 결과가 없습니다.</div>
+      {% endif %}
+
+      {% if protocol %}
+        <div class="results">
+          <div class="card">
+            <div class="meta">protocol json</div>
+            <pre class="snippet">{{ protocol | tojson(indent=2) }}</pre>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  </body>
+</html>

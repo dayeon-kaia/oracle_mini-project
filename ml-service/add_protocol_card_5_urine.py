@@ -1,0 +1,423 @@
+#!/usr/bin/env python3
+"""
+프로토콜 카드 5 (소변량/AKI) 추가 임베딩 스크립트
+"""
+
+import os
+import json
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_community.vectorstores import Chroma
+from dotenv import load_dotenv
+
+load_dotenv()
+
+PERSIST_DIR = os.getenv("PERSIST_DIR", "./db_medical_md")
+COLLECTION_NAME = os.getenv("COLLECTION_NAME", "medical_md")
+HF_MODEL = os.getenv("HF_MODEL", "BAAI/bge-m3")
+
+def create_urine_output_chunks():
+    """프로토콜 카드 5: 소변량 및 AKI 청크 생성"""
+    chunks = []
+    
+    # Chunk 1: AKI Early Warning - Oliguria Criteria
+    chunks.append({
+        "id": "AKI_BUNDLE.Trigger.Oliguria.v1",
+        "text": """# CARD: 소변량 기반 장기부전(AKI) 조기 경보 프로토콜
+## SECTION: Trigger
+### SUBSECTION: Oliguria Criteria
+
+- **조기 위험 신호:** 성인 기준 시간당 소변량 **< 0.5 mL/kg/h** 또는 **< 30 mL/h**가 **2시간 이상 지속**.
+- **AKI 경보:** 소변량 **< 0.3 mL/kg/h로 24시간 이상 지속** 또는 **12시간 이상 무뇨(Anuria)**.
+- **EDCC 트리거 로직:** 단일 수치보다 **지난 4시간 동안의 지속적 감소 추세**를 감지하여 **12시간 내 상태 악화 위험도** 산출.
+[2020년 한국심폐소생술 가이드라인, 2024 성인 패혈증 초기치료지침서, Early Deterioration Command Center 기획서]""",
+        "metadata": {
+            "doc_type": "protocol_card",
+            "card_id": "AKI_BUNDLE",
+            "card_title": "소변량 기반 장기부전(AKI) 조기 경보 프로토콜",
+            "section": "Trigger",
+            "subsection": "Oliguria",
+            "version": "v1.0",
+            "language": "ko",
+            "clinical_domain": ["renal", "critical_care"],
+            "intended_users": ["clinician"],
+            "inputs_required": ["UO", "체중"],
+            "outputs": ["alert"],
+            "keywords": ["핍뇨", "Oliguria", "AKI", "UO<0.5", "UO<30mL", "무뇨", "Anuria"],
+            "citations": [
+                "[2020년 한국심폐소생술 가이드라인]",
+                "[2024 성인 패혈증 초기치료지침서]",
+                "[Early Deterioration Command Center 기획서]"
+            ],
+            "signals": ["UO"],
+            "decision_points": ["aki_screening"],
+            "exclusion_group": "",
+            "route_if_query_contains": []
+        }
+    })
+    
+    # Chunk 2: Action - Differential Diagnosis
+    chunks.append({
+        "id": "AKI_BUNDLE.Action.Differential_Dx.v1",
+        "text": """# CARD: 소변량 기반 장기부전(AKI) 조기 경보 프로토콜
+## SECTION: Action
+### SUBSECTION: Differential Diagnosis
+
+- **신전성(Pre-renal) AKI:** 탈수 또는 심박출량 저하 등 **전신 관류 저하(Hypoperfusion)**가 원인으로, 수액 소생술이나 승압제 투여로 관류압 회복 시 소변량 회복 가능.
+- **패혈증 관련 AKI:** 감염에 의한 염증 반응과 신장 허혈성 손상이 복합적으로 작용하며, 단순 관류 개선만으로는 회복되지 않을 수 있음.
+[2020년 한국심폐소생술 가이드라인, 2024 성인 패혈증 초기치료지침서]""",
+        "metadata": {
+            "doc_type": "protocol_card",
+            "card_id": "AKI_BUNDLE",
+            "card_title": "소변량 기반 장기부전(AKI) 조기 경보 프로토콜",
+            "section": "Action",
+            "subsection": "Differential_Dx",
+            "version": "v1.0",
+            "language": "ko",
+            "clinical_domain": ["renal", "critical_care"],
+            "intended_users": ["clinician"],
+            "inputs_required": [],
+            "outputs": ["recommendation"],
+            "keywords": ["Pre-renal AKI", "신전성", "패혈증 AKI", "관류저하", "허혈"],
+            "citations": [
+                "[2020년 한국심폐소생술 가이드라인]",
+                "[2024 성인 패혈증 초기치료지침서]"
+            ],
+            "signals": [],
+            "decision_points": ["aki_type_differentiation"],
+            "exclusion_group": "",
+            "route_if_query_contains": []
+        }
+    })
+    
+    # Chunk 3: Action - Lethal Triad Response
+    chunks.append({
+        "id": "AKI_BUNDLE.Action.Lethal_Triad.v1",
+        "text": """# CARD: 소변량 기반 장기부전(AKI) 조기 경보 프로토콜
+## SECTION: Action
+### SUBSECTION: Lethal Triad Response
+
+- **위험 조합:** **MAP < 65 mmHg + Lactate 상승 + 소변량 감소(Oliguria)**
+- **즉각 조치:**
+    - **3시간 이내 30 mL/kg 정질액 투여** 시작
+    - 수액 중에도 저혈압·무뇨 지속 시 **노르에피네프린 등 승압제 조기 투여**로 신장 관류압 확보
+    - **신장 독성 약물(NSAIDs 등) 즉시 중단**, 배설 지연 약물 용량 조절
+[2024 성인 패혈증 초기치료지침서, Early Deterioration Command Center 기획서]""",
+        "metadata": {
+            "doc_type": "protocol_card",
+            "card_id": "AKI_BUNDLE",
+            "card_title": "소변량 기반 장기부전(AKI) 조기 경보 프로토콜",
+            "section": "Action",
+            "subsection": "Lethal_Triad",
+            "version": "v1.0",
+            "language": "ko",
+            "clinical_domain": ["renal", "critical_care"],
+            "intended_users": ["clinician"],
+            "inputs_required": ["MAP", "Lactate", "UO"],
+            "outputs": ["alert", "recommendation"],
+            "keywords": ["Lethal Triad", "MAP<65", "Lactate", "Oliguria", "30mL/kg", "승압제", "신독성약물"],
+            "citations": [
+                "[2024 성인 패혈증 초기치료지침서]",
+                "[Early Deterioration Command Center 기획서]"
+            ],
+            "signals": ["MAP", "Lactate", "UO"],
+            "decision_points": ["critical_triad_management"],
+            "exclusion_group": "",
+            "route_if_query_contains": []
+        }
+    })
+    
+    # Chunk 4: Action - Tracking Metrics
+    chunks.append({
+        "id": "AKI_BUNDLE.Action.Tracking_Metrics.v1",
+        "text": """# CARD: 소변량 기반 장기부전(AKI) 조기 경보 프로토콜
+## SECTION: Action
+### SUBSECTION: Tracking Metrics
+
+- **MAP Trend:** 관류압 **≥ 65 mmHg** 유지 여부
+- **Lactate Clearance:** 소생술 이후 젖산 감소 여부
+- **UO Trend:** 처치 후 시간당 소변량 **≥ 0.5 mL/kg/h** 회복 여부
+- **Fluid Balance:** 과도한 수액으로 **폐부종(Lung edema)** 발생 여부 감시
+[2024 성인 패혈증 초기치료지침서, 2021 Surviving Sepsis Campaign International]""",
+        "metadata": {
+            "doc_type": "protocol_card",
+            "card_id": "AKI_BUNDLE",
+            "card_title": "소변량 기반 장기부전(AKI) 조기 경보 프로토콜",
+            "section": "Action",
+            "subsection": "Tracking",
+            "version": "v1.0",
+            "language": "ko",
+            "clinical_domain": ["renal", "critical_care"],
+            "intended_users": ["clinician"],
+            "inputs_required": ["MAP", "Lactate", "UO", "FluidBalance"],
+            "outputs": ["recommendation"],
+            "keywords": ["MAP트렌드", "Lactate clearance", "UO트렌드", "Fluid balance", "폐부종"],
+            "citations": [
+                "[2024 성인 패혈증 초기치료지침서]",
+                "[2021 Surviving Sepsis Campaign International]"
+            ],
+            "signals": ["MAP", "Lactate", "UO"],
+            "decision_points": ["treatment_response_monitoring"],
+            "exclusion_group": "",
+            "route_if_query_contains": []
+        }
+    })
+    
+    # Chunk 5: Action - CRRT Escalation
+    chunks.append({
+        "id": "AKI_BUNDLE.Action.CRRT.v1",
+        "text": """# CARD: 소변량 기반 장기부전(AKI) 조기 경보 프로토콜
+## SECTION: Action
+### SUBSECTION: CRRT Escalation
+
+- 적절한 수액·관류 개선에도 불구하고 **요독 증상**, **불응성 액체 과부하**, **중증 고칼륨혈증**이 동반되면 **지속적 신대체요법(CRRT)** 적용을 검토.
+[2021 Surviving Sepsis Campaign International, 2024 성인 패혈증 초기치료지침서]""",
+        "metadata": {
+            "doc_type": "protocol_card",
+            "card_id": "AKI_BUNDLE",
+            "card_title": "소변량 기반 장기부전(AKI) 조기 경보 프로토콜",
+            "section": "Action",
+            "subsection": "CRRT",
+            "version": "v1.0",
+            "language": "ko",
+            "clinical_domain": ["renal", "critical_care"],
+            "intended_users": ["clinician"],
+            "inputs_required": [],
+            "outputs": ["recommendation"],
+            "keywords": ["CRRT", "신대체요법", "요독증상", "액체과부하", "고칼륨혈증"],
+            "citations": [
+                "[2021 Surviving Sepsis Campaign International]",
+                "[2024 성인 패혈증 초기치료지침서]"
+            ],
+            "signals": [],
+            "decision_points": ["crrt_consideration"],
+            "exclusion_group": "",
+            "route_if_query_contains": []
+        }
+    })
+    
+    # Chunk 6: XAI
+    chunks.append({
+        "id": "AKI_BUNDLE.XAI.v1",
+        "text": """# CARD: 소변량 기반 장기부전(AKI) 조기 경보 프로토콜
+## SECTION: XAI
+
+- "지난 4시간 동안 소변량이 지속적으로 감소하여 AKI 위험이 감지되었습니다. MAP과 젖산을 함께 고려해 수액 30 mL/kg 및 승압제 전략을 재평가하십시오."
+[2020년 한국심폐소생술 가이드라인, 2024 성인 패혈증 초기치료지침서]""",
+        "metadata": {
+            "doc_type": "protocol_card",
+            "card_id": "AKI_BUNDLE",
+            "card_title": "소변량 기반 장기부전(AKI) 조기 경보 프로토콜",
+            "section": "XAI",
+            "subsection": "",
+            "version": "v1.0",
+            "language": "ko",
+            "clinical_domain": ["renal", "critical_care"],
+            "intended_users": ["clinician"],
+            "inputs_required": [],
+            "outputs": ["xai_message"],
+            "keywords": ["설명", "메시지", "권고"],
+            "citations": [
+                "[2020년 한국심폐소생술 가이드라인]",
+                "[2024 성인 패혈증 초기치료지침서]"
+            ],
+            "signals": [],
+            "decision_points": [],
+            "exclusion_group": "",
+            "route_if_query_contains": []
+        }
+    })
+    
+    # ==================== 이뇨 요법 ====================
+    
+    # Chunk 7: Diuretic Therapy - Trigger
+    chunks.append({
+        "id": "DIURETIC_BUNDLE.Trigger.v1",
+        "text": """# CARD: 소변량 증가 유도(이뇨 요법) 프로토콜
+## SECTION: Trigger
+
+- **체액 과부하 또는 폐부종**이 동반된 심부전 환자에서 과도한 체액 제거가 필요한 경우.
+[2022 대한심부전학회 심부전 진료지침]""",
+        "metadata": {
+            "doc_type": "protocol_card",
+            "card_id": "DIURETIC_BUNDLE",
+            "card_title": "소변량 증가 유도(이뇨 요법) 프로토콜",
+            "section": "Trigger",
+            "subsection": "",
+            "version": "v1.0",
+            "language": "ko",
+            "clinical_domain": ["cardiology", "renal"],
+            "intended_users": ["clinician"],
+            "inputs_required": [],
+            "outputs": ["alert"],
+            "keywords": ["체액과부하", "폐부종", "심부전", "이뇨요법"],
+            "citations": [
+                "[2022 대한심부전학회 심부전 진료지침]"
+            ],
+            "signals": [],
+            "decision_points": ["diuretic_indication"],
+            "exclusion_group": "",
+            "route_if_query_contains": []
+        }
+    })
+    
+    # Chunk 8: Diuretic Therapy - Loop Diuretics
+    chunks.append({
+        "id": "DIURETIC_BUNDLE.Action.Loop_Diuretics.v1",
+        "text": """# CARD: 소변량 증가 유도(이뇨 요법) 프로토콜
+## SECTION: Action
+### SUBSECTION: Loop Diuretics
+
+- **고리작용 이뇨제(Loop diuretics):** 푸로세미드(Furosemide) 또는 토르세미드(Torsemide) 우선 사용. 경구 효과 부족 시 **정맥 투여로 전환**하거나 용량 증량.
+- **병용 요법:** 고리작용 이뇨제 반응이 불충분한 **이뇨제 저항성** 환자에서 **티아지드계 이뇨제 단기간 병용**.
+- **특수 상황 (저나트륨혈증):** 바소프레신 V2 수용체 길항제(예: **톨바탄**) 사용 고려.
+[2022 대한심부전학회 심부전 진료지침]""",
+        "metadata": {
+            "doc_type": "protocol_card",
+            "card_id": "DIURETIC_BUNDLE",
+            "card_title": "소변량 증가 유도(이뇨 요법) 프로토콜",
+            "section": "Action",
+            "subsection": "Loop_Diuretics",
+            "version": "v1.0",
+            "language": "ko",
+            "clinical_domain": ["cardiology", "renal"],
+            "intended_users": ["clinician"],
+            "inputs_required": [],
+            "outputs": ["recommendation"],
+            "keywords": ["푸로세미드", "Furosemide", "토르세미드", "Loop diuretics", "티아지드", "톨바탄"],
+            "citations": [
+                "[2022 대한심부전학회 심부전 진료지침]"
+            ],
+            "signals": [],
+            "decision_points": ["diuretic_selection"],
+            "exclusion_group": "",
+            "route_if_query_contains": []
+        }
+    })
+    
+    # Chunk 9: Diuretic Therapy - Monitoring
+    chunks.append({
+        "id": "DIURETIC_BUNDLE.Action.Monitoring.v1",
+        "text": """# CARD: 소변량 증가 유도(이뇨 요법) 프로토콜
+## SECTION: Action
+### SUBSECTION: Monitoring
+
+- 전해질 불균형(**저칼륨혈증, 저마그네슘혈증**) 및 **증상성 저혈압** 밀착 감시.
+- 과도한 이뇨로 **BUN/Cr 비 ≥ 20** 상승 시 체액 부족 의심 → 용량 조절.
+[2022 대한심부전학회 심부전 진료지침]""",
+        "metadata": {
+            "doc_type": "protocol_card",
+            "card_id": "DIURETIC_BUNDLE",
+            "card_title": "소변량 증가 유도(이뇨 요법) 프로토콜",
+            "section": "Action",
+            "subsection": "Monitoring",
+            "version": "v1.0",
+            "language": "ko",
+            "clinical_domain": ["cardiology", "renal"],
+            "intended_users": ["clinician"],
+            "inputs_required": ["전해질", "BP", "BUN", "Cr"],
+            "outputs": ["recommendation"],
+            "keywords": ["저칼륨혈증", "저마그네슘혈증", "저혈압", "BUN/Cr비", "전해질"],
+            "citations": [
+                "[2022 대한심부전학회 심부전 진료지침]"
+            ],
+            "signals": ["전해질", "BP", "BUN", "Cr"],
+            "decision_points": ["diuretic_safety"],
+            "exclusion_group": "",
+            "route_if_query_contains": []
+        }
+    })
+    
+    # Chunk 10: Diuretic - XAI
+    chunks.append({
+        "id": "DIURETIC_BUNDLE.XAI.v1",
+        "text": """# CARD: 소변량 증가 유도(이뇨 요법) 프로토콜
+## SECTION: XAI
+
+- "체액 과부하로 인한 폐부종이 의심되어 이뇨 요법을 고려합니다. 이뇨제 반응과 전해질 변화를 모니터링하며 BUN/Cr 비 상승 여부를 확인하십시오."
+[2022 대한심부전학회 심부전 진료지침]""",
+        "metadata": {
+            "doc_type": "protocol_card",
+            "card_id": "DIURETIC_BUNDLE",
+            "card_title": "소변량 증가 유도(이뇨 요법) 프로토콜",
+            "section": "XAI",
+            "subsection": "",
+            "version": "v1.0",
+            "language": "ko",
+            "clinical_domain": ["cardiology", "renal"],
+            "intended_users": ["clinician"],
+            "inputs_required": [],
+            "outputs": ["xai_message"],
+            "keywords": ["설명", "메시지", "권고"],
+            "citations": [
+                "[2022 대한심부전학회 심부전 진료지침]"
+            ],
+            "signals": [],
+            "decision_points": [],
+            "exclusion_group": "",
+            "route_if_query_contains": []
+        }
+    })
+    
+    return chunks
+
+def add_chunks_to_vectordb(new_chunks):
+    """기존 VectorDB에 새 청크 추가"""
+    print(f"📝 Adding {len(new_chunks)} new chunks to existing VectorDB...")
+    
+    embeddings = HuggingFaceEmbeddings(model_name=HF_MODEL, model_kwargs={"device": "cpu"}, encode_kwargs={"normalize_embeddings": True})
+    vectorstore = Chroma(persist_directory=PERSIST_DIR, collection_name=COLLECTION_NAME, embedding_function=embeddings)
+    
+    texts, metadatas, ids = [], [], []
+    for chunk in new_chunks:
+        texts.append(chunk["text"])
+        ids.append(chunk["id"])
+        serialized_metadata = {k: json.dumps(v, ensure_ascii=False) if isinstance(v, (list, dict)) else v for k, v in chunk["metadata"].items()}
+        metadatas.append(serialized_metadata)
+    
+    vectorstore.add_texts(texts=texts, metadatas=metadatas, ids=ids)
+    print(f"✅ Successfully added {len(new_chunks)} chunks")
+    return vectorstore
+
+def verify_additions():
+    """추가된 청크 검증"""
+    print("\n🔍 Verifying new chunks...")
+    embeddings = HuggingFaceEmbeddings(model_name=HF_MODEL, model_kwargs={"device": "cpu"}, encode_kwargs={"normalize_embeddings": True})
+    vectorstore = Chroma(persist_directory=PERSIST_DIR, collection_name=COLLECTION_NAME, embedding_function=embeddings)
+    
+    for query, expected in [
+        ("소변량이 0.5 미만일 때", "AKI_BUNDLE"),
+        ("AKI 위험 조합", "AKI_BUNDLE"),
+        ("이뇨제는 언제 사용?", "DIURETIC_BUNDLE"),
+        ("푸로세미드 부작용", "DIURETIC_BUNDLE")
+    ]:
+        results = vectorstore.similarity_search(query, k=2, filter={"exclusion_group": ""})
+        print(f"\n📝 Query: {query}")
+        if results:
+            actual = results[0].metadata.get('card_id')
+            print(f"   Expected: {expected}, Got: {actual}, Match: {'✓' if actual == expected else '✗'}")
+    print("\n✅ Verification complete")
+
+def main():
+    print("=" * 80)
+    print("🚀 Adding Protocol Card 5 (Urine Output/AKI) to VectorDB")
+    print("=" * 80)
+    
+    chunks = create_urine_output_chunks()
+    print(f"\n✅ Created {len(chunks)} chunks (AKI: 6, DIURETIC: 4)")
+    
+    add_chunks_to_vectordb(chunks)
+    verify_additions()
+    
+    with open("protocol_card_5_urine_output.jsonl", 'w', encoding='utf-8') as f:
+        for chunk in chunks:
+            json.dump(chunk, f, ensure_ascii=False)
+            f.write('\n')
+    print("\n📤 Exported to protocol_card_5_urine_output.jsonl")
+    
+    print("\n" + "=" * 80)
+    print("✨ Successfully added Protocol Card 5!")
+    print(f"   Total VectorDB: 45 + {len(chunks)} = {45 + len(chunks)} chunks")
+    print("=" * 80)
+
+if __name__ == "__main__":
+    main()

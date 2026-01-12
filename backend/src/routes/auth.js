@@ -20,9 +20,11 @@ const router = express.Router();
 // Mock 계정 (하드코딩)
 // ========================
 const mockUsers = [
+  { id: "doctor1", password: "1234", role: "doctor", name: "닥터" },
+  { id: "nurse1", password: "1234", role: "nurse", name: "간호사" },
+  // 아래는 테스트용으로 유지 (필요시 제거 가능)
   { id: "patient1", password: "1234", role: "patient", name: "보호자" },
   { id: "resident1", password: "1234", role: "resident", name: "레저던트" },
-  { id: "doctor1", password: "1234", role: "doctor", name: "닥터" },
   { id: "admin", password: "1234", role: "admin", name: "시스템 관리자" },
 ];
 

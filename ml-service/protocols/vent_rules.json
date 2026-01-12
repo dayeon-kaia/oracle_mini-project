@@ -1,0 +1,154 @@
+{
+    "protocol": "vent",
+    "description": "호흡 악화 대응 프로토콜 (기계환기 평가)",
+    "rules": [
+        {
+            "rule_id": "VENT_START_OXYGEN",
+            "priority": "HIGH",
+            "condition": {
+                "all": [
+                    {
+                        "spo2_lt": 92
+                    },
+                    {
+                        "on_oxygen": false
+                    }
+                ]
+            },
+            "action": "산소 투여 시작 고려 (NC)",
+            "evidence": {
+                "source": "대한중환자의학회 호흡부전 관리 지침",
+                "page": 28
+            }
+        },
+        {
+            "rule_id": "VENT_ESCALATE_OXYGEN",
+            "priority": "STAT",
+            "condition": {
+                "all": [
+                    {
+                        "spo2_lt": 90
+                    },
+                    {
+                        "on_oxygen": true
+                    }
+                ]
+            },
+            "action": "산소 증량 또는 HFNC 고려",
+            "evidence": {
+                "source": "대한중환자의학회 호흡부전 관리 지침",
+                "page": 30
+            }
+        },
+        {
+            "rule_id": "VENT_HIGH_FIO2_HYPOXIA",
+            "priority": "STAT",
+            "condition": {
+                "all": [
+                    {
+                        "spo2_lt": 90
+                    },
+                    {
+                        "fio2_ge": 0.6
+                    }
+                ]
+            },
+            "action": "고유량 산소에도 저산소증 지속 → NIV/삽관 고려",
+            "evidence": {
+                "source": "대한중환자의학회 호흡부전 관리 지침",
+                "page": 32
+            }
+        },
+        {
+            "rule_id": "VENT_TACHYPNEA",
+            "priority": "HIGH",
+            "condition": {
+                "rr_gt": 30
+            },
+            "action": "빈호흡 → 호흡부전 진행 가능성",
+            "evidence": {
+                "source": "대한중환자의학회 호흡부전 관리 지침",
+                "page": 26
+            }
+        },
+        {
+            "rule_id": "VENT_NIV_EVALUATION",
+            "priority": "STAT",
+            "condition": {
+                "all": [
+                    {
+                        "spo2_lt": 90
+                    },
+                    {
+                        "rr_gt": 30
+                    }
+                ]
+            },
+            "action": "비침습적 환기(NIV) 또는 삽관 필요성 평가",
+            "evidence": {
+                "source": "대한중환자의학회 호흡부전 관리 지침",
+                "page": 34
+            }
+        },
+        {
+            "rule_id": "VENT_INTUBATION_PREP",
+            "priority": "STAT",
+            "condition": {
+                "all": [
+                    {
+                        "on_vent": false
+                    },
+                    {
+                        "spo2_lt": 88
+                    }
+                ]
+            },
+            "action": "기도 보호 및 기계환기 준비 고려",
+            "evidence": {
+                "source": "대한중환자의학회 호흡부전 관리 지침",
+                "page": 36
+            }
+        },
+        {
+            "rule_id": "VENT_HFNC_FAILURE",
+            "priority": "STAT",
+            "condition": {
+                "all": [
+                    {
+                        "on_hfnc": true
+                    },
+                    {
+                        "spo2_lt": 90
+                    },
+                    {
+                        "rr_gt": 28
+                    }
+                ]
+            },
+            "action": "HFNC 실패 징후 → 삽관 준비",
+            "evidence": {
+                "source": "대한중환자의학회 호흡부전 관리 지침",
+                "page": 33
+            }
+        },
+        {
+            "rule_id": "VENT_COMBINED_DISTRESS",
+            "priority": "STAT",
+            "condition": {
+                "all": [
+                    {
+                        "spo2_lt": 88
+                    },
+                    {
+                        "rr_gt": 32
+                    }
+                ]
+            },
+            "action": "급성 호흡곤란 → 즉각적 기도 확보 평가",
+            "evidence": {
+                "source": "대한중환자의학회 호흡부전 관리 지침",
+                "page": 38
+            }
+        }
+    ]
+}

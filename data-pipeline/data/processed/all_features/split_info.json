@@ -1,0 +1,26 @@
+{
+  "random_state": 42,
+  "feature_config": "all",
+  "n_features": 35,
+  "n_labels": 12,
+  "total_samples": 941817,
+  "total_patients": 23938,
+  "train": {
+    "n_patients": 16756,
+    "n_samples": 657172,
+    "first_patient_id": 35814341,
+    "last_patient_id": 39881507
+  },
+  "val": {
+    "n_patients": 3591,
+    "n_samples": 141844,
+    "first_patient_id": 33424068,
+    "last_patient_id": 36494088
+  },
+  "test": {
+    "n_patients": 3591,
+    "n_samples": 142801,
+    "first_patient_id": 35143743,
+    "last_patient_id": 39028428
+  }
+}

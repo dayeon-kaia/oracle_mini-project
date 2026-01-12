@@ -1,0 +1,130 @@
+{
+    "protocol": "pressor",
+    "description": "순환부전 및 승압제 대응 프로토콜",
+    "rules": [
+        {
+            "rule_id": "PRESSOR_MAP_LOW_DETECTED",
+            "priority": "STAT",
+            "condition": {
+                "map_lt": 65
+            },
+            "action": "저혈압 확인 → 순환부전 가능성",
+            "evidence": {
+                "source": "KCDC + KSCCM 2024 패혈증 가이드라인",
+                "page": 56
+            }
+        },
+        {
+            "rule_id": "PRESSOR_POST_FLUIDS",
+            "priority": "STAT",
+            "condition": {
+                "map_lt": 65
+            },
+            "action": "수액 반응 평가 후 승압제 시작 고려",
+            "evidence": {
+                "source": "KCDC + KSCCM 2024 패혈증 가이드라인",
+                "page": 58
+            }
+        },
+        {
+            "rule_id": "PRESSOR_FIRST_LINE",
+            "priority": "STAT",
+            "condition": {
+                "all": [
+                    {
+                        "on_pressor": false
+                    },
+                    {
+                        "map_lt": 65
+                    }
+                ]
+            },
+            "action": "1차 승압제: norepinephrine 고려",
+            "evidence": {
+                "source": "KCDC + KSCCM 2024 패혈증 가이드라인",
+                "page": 60
+            }
+        },
+        {
+            "rule_id": "PRESSOR_TITRATION",
+            "priority": "HIGH",
+            "condition": {
+                "all": [
+                    {
+                        "on_pressor": true
+                    },
+                    {
+                        "map_lt": 65
+                    }
+                ]
+            },
+            "action": "승압제 증량 또는 추가 약제 고려",
+            "evidence": {
+                "source": "KCDC + KSCCM 2024 패혈증 가이드라인",
+                "page": 62
+            }
+        },
+        {
+            "rule_id": "PRESSOR_TARGET_MAP",
+            "priority": "HIGH",
+            "condition": {
+                "on_pressor": true
+            },
+            "action": "목표 MAP ≥ 65 mmHg 유지",
+            "evidence": {
+                "source": "KCDC + KSCCM 2024 패혈증 가이드라인",
+                "page": 57
+            }
+        },
+        {
+            "rule_id": "PRESSOR_SEVERE_HYPOTENSION",
+            "priority": "STAT",
+            "condition": {
+                "map_lt": 55
+            },
+            "action": "중증 저혈압 → 즉각적 승압제 시작 및 증량",
+            "evidence": {
+                "source": "KCDC + KSCCM 2024 패혈증 가이드라인",
+                "page": 59
+            }
+        },
+        {
+            "rule_id": "PRESSOR_WITH_LACTATE",
+            "priority": "STAT",
+            "condition": {
+                "all": [
+                    {
+                        "map_lt": 65
+                    },
+                    {
+                        "lactate_ge": 2.0
+                    }
+                ]
+            },
+            "action": "저혈압 + 고젖산혈증 → 승압제 + 소생 동시 진행",
+            "evidence": {
+                "source": "KCDC + KSCCM 2024 패혈증 가이드라인",
+                "page": 61
+            }
+        },
+        {
+            "rule_id": "PRESSOR_MONITORING",
+            "priority": "HIGH",
+            "condition": {
+                "all": [
+                    {
+                        "on_pressor": true
+                    },
+                    {
+                        "map_ge": 65
+                    }
+                ]
+            },
+            "action": "승압제 사용 중 → 혈역학 지속 모니터링",
+            "evidence": {
+                "source": "KCDC + KSCCM 2024 패혈증 가이드라인",
+                "page": 63
+            }
+        }
+    ]
+}
